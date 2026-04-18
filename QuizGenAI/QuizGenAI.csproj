@@ -155,6 +155,7 @@
     <Compile Include="DTOs\LoginResultDto.cs" />
     <Compile Include="DTOs\QuizEditorDto.cs" />
     <Compile Include="DTOs\QuizListItemDto.cs" />
+    <Compile Include="DTOs\StudentQuizListItemDto.cs" />
     <Compile Include="DTOs\SubjectOptionDto.cs" />
     <Compile Include="DTOs\TeacherDashboardDto.cs" />
     <Compile Include="Enums\QuestionType.cs" />

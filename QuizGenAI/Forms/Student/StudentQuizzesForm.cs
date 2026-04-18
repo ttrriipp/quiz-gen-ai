@@ -1,18 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
+using QuizGenAI.DTOs;
+using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Student
 {
     public partial class StudentQuizzesForm : Form
     {
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
+        private readonly QuizService _quizService = new QuizService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _contentHost;
         private Label _lblGreeting;
         private string _displayName = "Student";
+        private int _currentUserId;
+        private string _activeSection = "quizzes";
 
         public StudentQuizzesForm()
         {
@@ -30,6 +36,19 @@ namespace QuizGenAI.Forms.Student
                 if (_lblGreeting != null)
                 {
                     _lblGreeting.Text = string.Format("Signed in as {0}", _displayName);
+                }
+            }
+        }
+
+        public int CurrentUserId
+        {
+            get { return _currentUserId; }
+            set
+            {
+                _currentUserId = value;
+                if (_contentHost != null && _activeSection == "quizzes")
+                {
+                    RenderQuizLandingView();
                 }
             }
         }
@@ -194,14 +213,16 @@ namespace QuizGenAI.Forms.Student
 
         private void ShowSection(string sectionKey)
         {
+            _activeSection = string.IsNullOrWhiteSpace(sectionKey) ? "quizzes" : sectionKey;
+
             foreach (var pair in _navButtons)
             {
-                var isActive = pair.Key == sectionKey;
+                var isActive = pair.Key == _activeSection;
                 pair.Value.BackColor = isActive ? Color.FromArgb(3, 105, 161) : Color.FromArgb(15, 23, 42);
                 pair.Value.ForeColor = isActive ? Color.White : Color.FromArgb(226, 232, 240);
             }
 
-            if (sectionKey == "results")
+            if (_activeSection == "results")
             {
                 _lblPageTitle.Text = "Results";
                 _lblPageDescription.Text = "Progress, score history, and review feedback will appear here.";
@@ -220,6 +241,10 @@ namespace QuizGenAI.Forms.Student
         private void RenderQuizLandingView()
         {
             _contentHost.Controls.Clear();
+            var quizzes = _quizService.GetStudentQuizList(_currentUserId);
+            var completedAttempts = quizzes.Sum(x => x.AttemptCount);
+            var bestScore = quizzes.Where(x => x.BestScore.HasValue).Select(x => x.BestScore.Value).DefaultIfEmpty().Max();
+            var availableNow = quizzes.Count(x => x.CanStart);
 
             var root = new TableLayoutPanel
             {
@@ -229,10 +254,10 @@ namespace QuizGenAI.Forms.Student
             };
 
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 152F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            root.Controls.Add(CreateHeroPanel(), 0, 0);
+            root.Controls.Add(CreateHeroPanel(quizzes.Count), 0, 0);
 
             var statRow = new TableLayoutPanel
             {
@@ -246,47 +271,17 @@ namespace QuizGenAI.Forms.Student
             statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
-            statRow.Controls.Add(CreateMetricCard("Available Quizzes", "0", "Published quiz cards will appear here after quiz management is built."), 0, 0);
-            statRow.Controls.Add(CreateMetricCard("Completed Attempts", "0", "This updates after exam submission and result calculation are added."), 1, 0);
-            statRow.Controls.Add(CreateMetricCard("Best Score", "0%", "Pulled from result history once scoring exists."), 2, 0);
+            statRow.Controls.Add(CreateMetricCard("Available Now", availableNow.ToString(), "Only quizzes inside their publish window can be started."), 0, 0);
+            statRow.Controls.Add(CreateMetricCard("Attempt History", completedAttempts.ToString(), "This counts prior attempts already recorded for this student."), 1, 0);
+            statRow.Controls.Add(CreateMetricCard("Best Score", bestScore > 0 ? string.Format("{0:0.#}%", bestScore) : "No result yet", "This updates as soon as scored attempts are recorded."), 2, 0);
 
             root.Controls.Add(statRow, 0, 1);
 
-            var bottom = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1
-            };
-
-            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
-            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
-
-            bottom.Controls.Add(CreateInsightPanel(
-                "Student flow roadmap",
-                "This shell now reflects the intended student journey from AGENTS.md.",
-                new[]
-                {
-                    "Browse published quiz cards",
-                    "Enter exam screen with timer and navigation",
-                    "Review results and recommendations"
-                }), 0, 0);
-
-            bottom.Controls.Add(CreateInsightPanel(
-                "Current shell coverage",
-                "Navigation is separated before the exam flow is implemented.",
-                new[]
-                {
-                    "Quizzes landing view is active",
-                    "Results has a dedicated navigation slot",
-                    "Header area is ready for filters or summary pills"
-                }), 1, 0);
-
-            root.Controls.Add(bottom, 0, 2);
+            root.Controls.Add(CreateQuizBrowserPanel(quizzes), 0, 2);
             _contentHost.Controls.Add(root);
         }
 
-        private Panel CreateHeroPanel()
+        private Panel CreateHeroPanel(int quizCount)
         {
             var panel = CreateSurfacePanel();
             panel.Padding = new Padding(24, 22, 24, 22);
@@ -305,15 +300,216 @@ namespace QuizGenAI.Forms.Student
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 48,
+                Height = 52,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Text = "Published quizzes, timers, and answer review will plug into this student shell without changing the overall layout."
+                Text = string.Format("{0} published quizzes are visible here. Start buttons are now gated by publish windows, while the full timed exam flow is the next step.", quizCount)
             };
 
             panel.Controls.Add(lblDescription);
             panel.Controls.Add(lblTitle);
             return panel;
+        }
+
+        private Panel CreateQuizBrowserPanel(IList<StudentQuizListItemDto> quizzes)
+        {
+            var panel = CreateSurfacePanel();
+            panel.Padding = new Padding(20, 18, 20, 20);
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = "Published quizzes"
+            };
+
+            var lblDescription = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Text = "Students can only see published quizzes. Cards show whether a quiz is open, upcoming, or already closed."
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+
+            if (quizzes.Count == 0)
+            {
+                flow.Controls.Add(CreateEmptyStateCard());
+            }
+            else
+            {
+                foreach (var quiz in quizzes)
+                {
+                    flow.Controls.Add(CreateQuizCard(quiz));
+                }
+            }
+
+            panel.Controls.Add(flow);
+            panel.Controls.Add(lblDescription);
+            panel.Controls.Add(lblTitle);
+            return panel;
+        }
+
+        private Control CreateEmptyStateCard()
+        {
+            var panel = new Panel
+            {
+                Width = 760,
+                Height = 128,
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 14),
+                Padding = new Padding(20, 18, 20, 18)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = "No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.",
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+
+            return panel;
+        }
+
+        private Control CreateQuizCard(StudentQuizListItemDto quiz)
+        {
+            var panel = new Panel
+            {
+                Width = 930,
+                Height = 152,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 14),
+                Padding = new Padding(18, 18, 18, 18)
+            };
+
+            var actionPanel = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 190
+            };
+
+            var btnStart = new Button
+            {
+                Width = 150,
+                Height = 42,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(203, 213, 225),
+                ForeColor = quiz.CanStart ? Color.White : Color.FromArgb(71, 85, 105),
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
+                Cursor = Cursors.Hand,
+                Enabled = true,
+                Top = 12,
+                Left = 18,
+                Tag = quiz
+            };
+
+            btnStart.FlatAppearance.BorderSize = 0;
+            btnStart.Click += StartQuiz_Click;
+
+            var lblAttemptInfo = new Label
+            {
+                AutoSize = false,
+                Width = 160,
+                Height = 48,
+                Left = 18,
+                Top = 64,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = quiz.HasCompletedAttempt
+                    ? string.Format("Attempts: {0}\r\nBest score: {1:0.#}%", quiz.AttemptCount, quiz.BestScore.GetValueOrDefault())
+                    : string.Format("Attempts: {0}\r\nBest score: Not graded yet", quiz.AttemptCount)
+            };
+
+            actionPanel.Controls.Add(lblAttemptInfo);
+            actionPanel.Controls.Add(btnStart);
+
+            var body = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = quiz.Title
+            };
+
+            var lblMeta = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                Text = string.Format("{0} | {1} | {2} mins | {3} questions", quiz.SubjectName, quiz.Difficulty, quiz.DurationMinutes, quiz.QuestionCount)
+            };
+
+            var lblTopic = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = string.Format("Topic: {0}", quiz.Topic)
+            };
+
+            var lblAvailability = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 42,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(185, 28, 28),
+                Text = quiz.AvailabilityLabel
+            };
+
+            body.Controls.Add(lblAvailability);
+            body.Controls.Add(lblTopic);
+            body.Controls.Add(lblMeta);
+            body.Controls.Add(lblTitle);
+
+            panel.Controls.Add(body);
+            panel.Controls.Add(actionPanel);
+            return panel;
+        }
+
+        private void StartQuiz_Click(object sender, EventArgs e)
+        {
+            var button = sender as Button;
+            var quiz = button != null ? button.Tag as StudentQuizListItemDto : null;
+            if (quiz == null)
+            {
+                return;
+            }
+
+            if (!quiz.CanStart)
+            {
+                MessageBox.Show(quiz.AvailabilityLabel, "Quiz Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            MessageBox.Show(
+                "Quiz discovery and start gating are now working. The timed exam screen is the next implementation step.",
+                "Exam Flow Pending",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private void RenderPlaceholderView(string title, string description, string[] bulletPoints)

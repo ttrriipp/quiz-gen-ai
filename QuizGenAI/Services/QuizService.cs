@@ -26,6 +26,62 @@ namespace QuizGenAI.Services
             }
         }
 
+        public List<StudentQuizListItemDto> GetStudentQuizList(int studentId)
+        {
+            if (studentId <= 0)
+            {
+                return new List<StudentQuizListItemDto>();
+            }
+
+            using (var context = new QuizGenAIDbContext())
+            {
+                var now = DateTime.UtcNow;
+                var quizzes = context.Quizzes
+                    .Include(x => x.Subject)
+                    .Include(x => x.Questions)
+                    .Include(x => x.StudentAttempts)
+                    .Where(x => x.Status == QuizStatus.Published)
+                    .OrderBy(x => x.AvailableFrom ?? x.UpdatedAt)
+                    .ThenBy(x => x.Title)
+                    .ToList();
+
+                return quizzes.Select(x =>
+                    {
+                        var attempts = x.StudentAttempts
+                            .Where(a => a.StudentId == studentId)
+                            .OrderByDescending(a => a.StartedAt)
+                            .ToList();
+
+                        var canStart =
+                            (!x.AvailableFrom.HasValue || x.AvailableFrom.Value <= now) &&
+                            (!x.AvailableUntil.HasValue || x.AvailableUntil.Value >= now);
+
+                        return new StudentQuizListItemDto
+                        {
+                            Id = x.Id,
+                            Title = x.Title,
+                            SubjectName = x.Subject != null ? x.Subject.Name : "Unknown Subject",
+                            Topic = x.Topic,
+                            Difficulty = x.Difficulty,
+                            DurationMinutes = x.DurationMinutes,
+                            QuestionCount = x.Questions.Count,
+                            AvailableFrom = x.AvailableFrom,
+                            AvailableUntil = x.AvailableUntil,
+                            CanStart = canStart,
+                            AvailabilityLabel = BuildAvailabilityLabel(x.AvailableFrom, x.AvailableUntil, now),
+                            AttemptCount = attempts.Count,
+                            HasCompletedAttempt = attempts.Any(a => a.SubmittedAt.HasValue),
+                            BestScore = attempts
+                                .Where(a => a.SubmittedAt.HasValue && a.ScorePercentage.HasValue)
+                                .Select(a => a.ScorePercentage)
+                                .DefaultIfEmpty()
+                                .Max()
+                        };
+                    })
+                    .ToList();
+            }
+        }
+
         public List<QuizListItemDto> GetQuizSummaries(string searchTerm, QuizStatus? status)
         {
             using (var context = new QuizGenAIDbContext())
@@ -270,16 +326,6 @@ namespace QuizGenAI.Services
                 ValidatePublishReadiness(quiz);
 
                 quiz.Status = QuizStatus.Published;
-                if (!quiz.AvailableFrom.HasValue)
-                {
-                    quiz.AvailableFrom = DateTime.UtcNow;
-                }
-
-                if (!quiz.AvailableUntil.HasValue)
-                {
-                    quiz.AvailableUntil = quiz.AvailableFrom.Value.AddDays(14);
-                }
-
                 quiz.UpdatedAt = DateTime.UtcNow;
                 context.SaveChanges();
             }
@@ -426,6 +472,26 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Each published question must have exactly one correct choice.");
                 }
             }
+        }
+
+        private static string BuildAvailabilityLabel(DateTime? availableFrom, DateTime? availableUntil, DateTime now)
+        {
+            if (availableFrom.HasValue && availableFrom.Value > now)
+            {
+                return string.Format("Opens {0}", availableFrom.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+            }
+
+            if (availableUntil.HasValue && availableUntil.Value < now)
+            {
+                return string.Format("Closed {0}", availableUntil.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+            }
+
+            if (availableUntil.HasValue)
+            {
+                return string.Format("Available until {0}", availableUntil.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+            }
+
+            return "Available now";
         }
     }
 }

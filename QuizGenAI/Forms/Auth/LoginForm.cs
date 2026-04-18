@@ -71,6 +71,7 @@ namespace QuizGenAI.Forms.Auth
                 case UserRole.Student:
                     return new StudentQuizzesForm
                     {
+                        CurrentUserId = userId,
                         DisplayName = displayName,
                         Text = string.Format("Student Quizzes - {0}", displayName)
                     };
