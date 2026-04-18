@@ -35,7 +35,7 @@ namespace QuizGenAI.Forms.Auth
 
                 Hide();
 
-                using (var nextForm = CreateLandingForm(result.Role, result.DisplayName))
+                using (var nextForm = CreateLandingForm(result.UserId, result.Role, result.DisplayName))
                 {
                     nextForm.ShowDialog(this);
                 }
@@ -55,7 +55,7 @@ namespace QuizGenAI.Forms.Auth
             }
         }
 
-        private Form CreateLandingForm(UserRole role, string displayName)
+        private Form CreateLandingForm(int userId, UserRole role, string displayName)
         {
             switch (role)
             {
@@ -63,6 +63,7 @@ namespace QuizGenAI.Forms.Auth
                 case UserRole.Teacher:
                     return new TeacherDashboardForm
                     {
+                        CurrentUserId = userId,
                         DisplayName = displayName,
                         Text = string.Format("Teacher Dashboard - {0}", displayName)
                     };

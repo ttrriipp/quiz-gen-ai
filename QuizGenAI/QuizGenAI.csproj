@@ -149,6 +149,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DTOs\LoginResultDto.cs" />
+    <Compile Include="DTOs\QuizEditorDto.cs" />
+    <Compile Include="DTOs\QuizListItemDto.cs" />
+    <Compile Include="DTOs\SubjectOptionDto.cs" />
     <Compile Include="Enums\QuestionType.cs" />
     <Compile Include="Enums\QuizDifficulty.cs" />
     <Compile Include="Enums\QuizStatus.cs" />
@@ -249,6 +252,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Services\AuthService.cs" />
+    <Compile Include="Services\QuizService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

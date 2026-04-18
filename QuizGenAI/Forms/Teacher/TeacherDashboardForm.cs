@@ -13,6 +13,7 @@ namespace QuizGenAI.Forms.Teacher
         private Panel _contentHost;
         private Label _lblGreeting;
         private string _displayName = "Teacher";
+        public int CurrentUserId { get; set; }
 
         public TeacherDashboardForm()
         {
@@ -193,7 +194,15 @@ namespace QuizGenAI.Forms.Teacher
                 return;
             }
 
-            ShowSection(Convert.ToString(button.Tag));
+            var sectionKey = Convert.ToString(button.Tag);
+            if (sectionKey == "quizzes")
+            {
+                OpenQuizManager();
+                ShowSection("dashboard");
+                return;
+            }
+
+            ShowSection(sectionKey);
         }
 
         private void ShowSection(string sectionKey)
@@ -472,6 +481,16 @@ namespace QuizGenAI.Forms.Teacher
         private static string BuildBulletList(IEnumerable<string> bulletPoints)
         {
             return "• " + string.Join(Environment.NewLine + "• ", bulletPoints);
+        }
+
+        private void OpenQuizManager()
+        {
+            using (var form = new TeacherQuizzesForm())
+            {
+                form.CurrentUserId = CurrentUserId;
+                form.DisplayName = DisplayName;
+                form.ShowDialog(this);
+            }
         }
     }
 }
