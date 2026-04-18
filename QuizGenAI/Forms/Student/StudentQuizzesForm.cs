@@ -13,6 +13,7 @@ namespace QuizGenAI.Forms.Student
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
         private readonly ExamService _examService = new ExamService();
         private readonly QuizService _quizService = new QuizService();
+        private readonly ReportService _reportService = new ReportService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _contentHost;
@@ -226,11 +227,8 @@ namespace QuizGenAI.Forms.Student
             if (_activeSection == "results")
             {
                 _lblPageTitle.Text = "Results";
-                _lblPageDescription.Text = "Progress, score history, and review feedback will appear here.";
-                RenderPlaceholderView(
-                    "Results workspace is ready",
-                    "This shell keeps the student journey separated from quiz taking and exam review.",
-                    new[] { "Average score summary", "Quizzes taken and best score cards", "Progress chart and results table" });
+                _lblPageDescription.Text = "Average score, history, and recent performance appear here.";
+                RenderResultsView();
                 return;
             }
 
@@ -280,6 +278,195 @@ namespace QuizGenAI.Forms.Student
 
             root.Controls.Add(CreateQuizBrowserPanel(quizzes), 0, 2);
             _contentHost.Controls.Add(root);
+        }
+
+        private void RenderResultsView()
+        {
+            _contentHost.Controls.Clear();
+            var results = _reportService.GetStudentResults(_currentUserId);
+
+            var root = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3
+            };
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 152F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            root.Controls.Add(CreateResultsHeroPanel(results.StudentName), 0, 0);
+
+            var statRow = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 1,
+                Margin = new Padding(0, 18, 0, 18)
+            };
+            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+
+            statRow.Controls.Add(CreateMetricCard("Average Score", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.AverageScore) : "No result yet", "Average across submitted attempts."), 0, 0);
+            statRow.Controls.Add(CreateMetricCard("Quizzes Taken", results.QuizzesTaken.ToString(), "Submitted attempts recorded in your history."), 1, 0);
+            statRow.Controls.Add(CreateMetricCard("Best Score", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.BestScore) : "No result yet", "Highest score achieved so far."), 2, 0);
+
+            root.Controls.Add(statRow, 0, 1);
+            root.Controls.Add(CreateResultsHistoryPanel(results), 0, 2);
+
+            _contentHost.Controls.Add(root);
+        }
+
+        private Panel CreateResultsHeroPanel(string studentName)
+        {
+            var panel = CreateSurfacePanel();
+            panel.Padding = new Padding(24, 22, 24, 22);
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 48,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = "This view tracks scored submissions. After each exam submission, the latest result also opens in a dedicated summary dialog."
+            });
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 36,
+                Font = new Font("Segoe UI Semibold", 21F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = string.Format("{0}'s results", string.IsNullOrWhiteSpace(studentName) ? "Student" : studentName)
+            });
+
+            return panel;
+        }
+
+        private Panel CreateResultsHistoryPanel(StudentResultsDto results)
+        {
+            var panel = CreateSurfacePanel();
+            panel.Padding = new Padding(20, 18, 20, 20);
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Text = "Most recent submitted attempts"
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = "Results history"
+            });
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+
+            if (results.History.Count == 0)
+            {
+                flow.Controls.Add(CreateEmptyStateCard("No submitted results yet. Finish an exam and the result history will appear here."));
+            }
+            else
+            {
+                foreach (var item in results.History)
+                {
+                    flow.Controls.Add(CreateResultHistoryCard(item));
+                }
+            }
+
+            panel.Controls.Add(flow);
+            return panel;
+        }
+
+        private Control CreateResultHistoryCard(StudentResultHistoryItemDto item)
+        {
+            var panel = new Panel
+            {
+                Width = 930,
+                Height = 138,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 14),
+                Padding = new Padding(18, 18, 18, 18)
+            };
+
+            var scorePanel = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 170
+            };
+
+            scorePanel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 48,
+                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = string.Format("{0:0.#}%", item.ScorePercentage),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            scorePanel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 22,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Text = item.SubmittedAtDisplay,
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            var body = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+
+            body.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 44,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = string.Format("Correct: {0} | Wrong: {1} | Unanswered: {2} | Time: {3}", item.CorrectAnswers, item.WrongAnswers, item.UnansweredQuestions, item.TimeSpentDisplay)
+            });
+
+            body.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                Text = item.SubjectName
+            });
+
+            body.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = item.QuizTitle
+            });
+
+            panel.Controls.Add(body);
+            panel.Controls.Add(scorePanel);
+            return panel;
         }
 
         private Panel CreateHeroPanel(int quizCount)
@@ -364,6 +551,11 @@ namespace QuizGenAI.Forms.Student
 
         private Control CreateEmptyStateCard()
         {
+            return CreateEmptyStateCard("No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.");
+        }
+
+        private Control CreateEmptyStateCard(string message)
+        {
             var panel = new Panel
             {
                 Width = 760,
@@ -379,7 +571,7 @@ namespace QuizGenAI.Forms.Student
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Text = "No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.",
+                Text = message,
                 TextAlign = ContentAlignment.MiddleLeft
             });
 

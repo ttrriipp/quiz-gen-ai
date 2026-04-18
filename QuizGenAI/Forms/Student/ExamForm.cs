@@ -630,16 +630,13 @@ namespace QuizGenAI.Forms.Student
             try
             {
                 var result = _examService.SubmitAttempt(_studentId, _session.AttemptId, autoSubmitted);
-                MessageBox.Show(
-                    string.Format(
-                        "Exam submitted.\r\n\r\nScore: {0:0.#}%\r\nCorrect answers: {1}/{2}\r\nAnswered questions: {3}",
-                        result.ScorePercentage,
-                        result.CorrectAnswers,
-                        result.TotalQuestions,
-                        result.AnsweredQuestions),
-                    autoSubmitted ? "Exam Auto-Submitted" : "Exam Submitted",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                var summary = _examService.GetAttemptSummary(_studentId, result.AttemptId);
+
+                using (var resultsForm = new StudentResultsForm(summary))
+                {
+                    resultsForm.Text = string.Format("Results - {0}", summary.QuizTitle);
+                    resultsForm.ShowDialog(this);
+                }
 
                 DialogResult = DialogResult.OK;
                 Close();

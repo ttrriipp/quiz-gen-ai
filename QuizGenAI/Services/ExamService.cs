@@ -133,6 +133,7 @@ namespace QuizGenAI.Services
             {
                 var attempt = context.StudentAttempts
                     .Include(x => x.Answers)
+                    .Include(x => x.Quiz)
                     .SingleOrDefault(x => x.Id == attemptId && x.StudentId == studentId);
 
                 if (attempt == null)
@@ -190,6 +191,7 @@ namespace QuizGenAI.Services
                 var totalQuestions = attempt.Answers.Count;
                 var answeredQuestions = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue);
                 var correctAnswers = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue && x.IsCorrect);
+                var wrongAnswers = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue && !x.IsCorrect);
                 var score = totalQuestions == 0 ? 0D : (double)correctAnswers / totalQuestions * 100D;
 
                 attempt.SubmittedAt = now;
@@ -200,11 +202,59 @@ namespace QuizGenAI.Services
                 return new ExamSubmitResultDto
                 {
                     AttemptId = attempt.Id,
+                    QuizTitle = attempt.Quiz != null ? attempt.Quiz.Title : "Quiz",
                     TotalQuestions = totalQuestions,
                     AnsweredQuestions = answeredQuestions,
                     CorrectAnswers = correctAnswers,
+                    WrongAnswers = wrongAnswers,
+                    UnansweredQuestions = Math.Max(0, totalQuestions - answeredQuestions),
                     ScorePercentage = score,
                     WasAutoSubmitted = autoSubmitted
+                };
+            }
+        }
+
+        public StudentAttemptSummaryDto GetAttemptSummary(int studentId, int attemptId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                var attempt = context.StudentAttempts
+                    .Include(x => x.Student)
+                    .Include(x => x.Quiz.Subject)
+                    .Include(x => x.Answers)
+                    .SingleOrDefault(x => x.Id == attemptId && x.StudentId == studentId);
+
+                if (attempt == null)
+                {
+                    throw new InvalidOperationException("Result summary not found.");
+                }
+
+                if (!attempt.SubmittedAt.HasValue)
+                {
+                    throw new InvalidOperationException("This attempt has not been submitted yet.");
+                }
+
+                var answeredQuestions = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue);
+                var correctAnswers = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue && x.IsCorrect);
+                var wrongAnswers = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue && !x.IsCorrect);
+                var totalQuestions = attempt.Answers.Count;
+
+                return new StudentAttemptSummaryDto
+                {
+                    AttemptId = attempt.Id,
+                    StudentName = attempt.Student != null ? attempt.Student.Name : "Student",
+                    QuizTitle = attempt.Quiz != null ? attempt.Quiz.Title : "Quiz",
+                    SubjectName = attempt.Quiz != null && attempt.Quiz.Subject != null ? attempt.Quiz.Subject.Name : "Unknown Subject",
+                    Topic = attempt.Quiz != null ? attempt.Quiz.Topic : string.Empty,
+                    ScorePercentage = Math.Round(attempt.ScorePercentage ?? 0, 1),
+                    TotalQuestions = totalQuestions,
+                    AnsweredQuestions = answeredQuestions,
+                    CorrectAnswers = correctAnswers,
+                    WrongAnswers = wrongAnswers,
+                    UnansweredQuestions = Math.Max(0, totalQuestions - answeredQuestions),
+                    SubmittedAtDisplay = attempt.SubmittedAt.HasValue ? attempt.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending",
+                    TimeSpentDisplay = FormatDuration(attempt.TimeSpentSeconds),
+                    WasAutoSubmitted = attempt.TimeSpentSeconds >= (attempt.Quiz != null ? attempt.Quiz.DurationMinutes * 60 : int.MaxValue)
                 };
             }
         }
@@ -240,6 +290,18 @@ namespace QuizGenAI.Services
             {
                 throw new InvalidOperationException("This quiz has no questions.");
             }
+        }
+
+        private static string FormatDuration(int seconds)
+        {
+            var safeSeconds = Math.Max(0, seconds);
+            var timeSpan = TimeSpan.FromSeconds(safeSeconds);
+            if (timeSpan.TotalHours >= 1)
+            {
+                return string.Format("{0:%h}h {0:%m}m {0:%s}s", timeSpan);
+            }
+
+            return string.Format("{0:%m}m {0:%s}s", timeSpan);
         }
     }
 }
