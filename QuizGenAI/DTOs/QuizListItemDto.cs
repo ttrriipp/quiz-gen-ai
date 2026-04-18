@@ -14,5 +14,8 @@ namespace QuizGenAI.DTOs
         public int DurationMinutes { get; set; }
         public int QuestionCount { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool CanPublish { get; set; }
+        public DateTime? AvailableFrom { get; set; }
+        public DateTime? AvailableUntil { get; set; }
     }
 }

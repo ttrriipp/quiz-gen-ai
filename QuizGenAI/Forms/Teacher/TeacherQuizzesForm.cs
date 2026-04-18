@@ -255,7 +255,7 @@ namespace QuizGenAI.Forms.Teacher
             var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 42
+                Height = 84
             };
 
             var btnEdit = CreateActionButton("Edit");
@@ -263,12 +263,29 @@ namespace QuizGenAI.Forms.Teacher
             btnEdit.Location = new Point(0, 4);
             btnEdit.Click += delegate { OpenEditor(quiz.Id); };
 
+            var btnStatus = CreateActionButton(GetPrimaryStatusActionLabel(quiz));
+            btnStatus.Width = 120;
+            btnStatus.Location = new Point(98, 4);
+            btnStatus.Click += delegate { HandlePrimaryStatusAction(quiz); };
+
+            var btnArchive = new Button
+            {
+                Text = "Archive",
+                Width = 88,
+                Height = 34,
+                Location = new Point(228, 4),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnArchive.Click += delegate { ArchiveQuiz(quiz); };
+            btnArchive.Enabled = quiz.Status != QuizStatus.Archived;
+
             var btnDelete = new Button
             {
                 Text = "Delete",
                 Width = 88,
                 Height = 34,
-                Location = new Point(98, 4),
+                Location = new Point(0, 44),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(185, 28, 28),
                 Cursor = Cursors.Hand
@@ -276,6 +293,8 @@ namespace QuizGenAI.Forms.Teacher
             btnDelete.Click += delegate { DeleteQuiz(quiz); };
 
             buttonPanel.Controls.Add(btnEdit);
+            buttonPanel.Controls.Add(btnStatus);
+            buttonPanel.Controls.Add(btnArchive);
             buttonPanel.Controls.Add(btnDelete);
 
             card.Controls.Add(buttonPanel);
@@ -375,6 +394,56 @@ namespace QuizGenAI.Forms.Teacher
             }
         }
 
+        private void HandlePrimaryStatusAction(QuizListItemDto quiz)
+        {
+            try
+            {
+                if (quiz.Status == QuizStatus.Published)
+                {
+                    _quizService.UnpublishQuiz(quiz.Id, CurrentUserId);
+                }
+                else
+                {
+                    _quizService.PublishQuiz(quiz.Id, CurrentUserId);
+                }
+
+                LoadQuizCards();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Status Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ArchiveQuiz(QuizListItemDto quiz)
+        {
+            if (quiz.Status == QuizStatus.Archived)
+            {
+                return;
+            }
+
+            var confirmation = MessageBox.Show(
+                string.Format("Archive the quiz \"{0}\"?", quiz.Title),
+                "Confirm Archive",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirmation != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                _quizService.ArchiveQuiz(quiz.Id, CurrentUserId);
+                LoadQuizCards();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Archive Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private static Button CreateActionButton(string text)
         {
             var button = new Button
@@ -390,6 +459,11 @@ namespace QuizGenAI.Forms.Teacher
             };
             button.FlatAppearance.BorderSize = 0;
             return button;
+        }
+
+        private static string GetPrimaryStatusActionLabel(QuizListItemDto quiz)
+        {
+            return quiz.Status == QuizStatus.Published ? "Move To Draft" : "Publish";
         }
 
         private static Color GetStatusBackColor(QuizStatus status)

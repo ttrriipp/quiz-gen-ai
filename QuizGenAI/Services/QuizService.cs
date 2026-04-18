@@ -62,7 +62,10 @@ namespace QuizGenAI.Services
                         Status = x.Status,
                         DurationMinutes = x.DurationMinutes,
                         QuestionCount = x.Questions.Count,
-                        UpdatedAt = x.UpdatedAt
+                        UpdatedAt = x.UpdatedAt,
+                        CanPublish = x.Questions.Count > 0,
+                        AvailableFrom = x.AvailableFrom,
+                        AvailableUntil = x.AvailableUntil
                     })
                     .ToList();
             }
@@ -244,6 +247,90 @@ namespace QuizGenAI.Services
             }
         }
 
+        public void PublishQuiz(int quizId, int userId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                EnsureTeacherOrAdmin(context, userId);
+
+                var quiz = context.Quizzes
+                    .Include(x => x.Questions.Select(q => q.Choices))
+                    .SingleOrDefault(x => x.Id == quizId);
+
+                if (quiz == null)
+                {
+                    throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.Status == QuizStatus.Archived)
+                {
+                    throw new InvalidOperationException("Archived quizzes cannot be published directly.");
+                }
+
+                ValidatePublishReadiness(quiz);
+
+                quiz.Status = QuizStatus.Published;
+                if (!quiz.AvailableFrom.HasValue)
+                {
+                    quiz.AvailableFrom = DateTime.UtcNow;
+                }
+
+                if (!quiz.AvailableUntil.HasValue)
+                {
+                    quiz.AvailableUntil = quiz.AvailableFrom.Value.AddDays(14);
+                }
+
+                quiz.UpdatedAt = DateTime.UtcNow;
+                context.SaveChanges();
+            }
+        }
+
+        public void UnpublishQuiz(int quizId, int userId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                EnsureTeacherOrAdmin(context, userId);
+
+                var quiz = context.Quizzes.SingleOrDefault(x => x.Id == quizId);
+                if (quiz == null)
+                {
+                    throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.Status != QuizStatus.Published)
+                {
+                    throw new InvalidOperationException("Only published quizzes can be moved back to draft.");
+                }
+
+                quiz.Status = QuizStatus.Draft;
+                quiz.UpdatedAt = DateTime.UtcNow;
+                context.SaveChanges();
+            }
+        }
+
+        public void ArchiveQuiz(int quizId, int userId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                EnsureTeacherOrAdmin(context, userId);
+
+                var quiz = context.Quizzes.SingleOrDefault(x => x.Id == quizId);
+                if (quiz == null)
+                {
+                    throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.Status == QuizStatus.Archived)
+                {
+                    throw new InvalidOperationException("Quiz is already archived.");
+                }
+
+                quiz.Status = QuizStatus.Archived;
+                quiz.UpdatedAt = DateTime.UtcNow;
+                context.SaveChanges();
+            }
+        }
+
         private static void EnsureTeacherOrAdmin(QuizGenAIDbContext context, int userId)
         {
             var allowed = context.UserRoles.Any(x =>
@@ -307,6 +394,36 @@ namespace QuizGenAI.Services
                 if (validChoices.Count(x => x.IsCorrect) != 1)
                 {
                     throw new InvalidOperationException("Each question must have exactly one correct choice.");
+                }
+            }
+        }
+
+        private static void ValidatePublishReadiness(Quiz quiz)
+        {
+            if (quiz.Questions == null || !quiz.Questions.Any())
+            {
+                throw new InvalidOperationException("A quiz must contain at least one question before publishing.");
+            }
+
+            foreach (var question in quiz.Questions)
+            {
+                if (string.IsNullOrWhiteSpace(question.Text))
+                {
+                    throw new InvalidOperationException("All published questions must have text.");
+                }
+
+                var choices = question.Choices == null
+                    ? new List<Choice>()
+                    : question.Choices.Where(x => !string.IsNullOrWhiteSpace(x.Text)).ToList();
+
+                if (choices.Count < 2)
+                {
+                    throw new InvalidOperationException("Each published question must have at least two choices.");
+                }
+
+                if (choices.Count(x => x.IsCorrect) != 1)
+                {
+                    throw new InvalidOperationException("Each published question must have exactly one correct choice.");
                 }
             }
         }
