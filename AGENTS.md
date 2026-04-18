@@ -55,15 +55,33 @@ Do not expand scope unless explicitly requested.
 ## 3. Required Tech Stack
 ### Core packages
 Use these packages unless implementation constraints force an equivalent from the approved list:
-- **Guna UI2** — modern WinForms UI
-- **LiveCharts2** — dashboards and reports
-- **ToastNotifications** — alerts and UX feedback
+- **Guna.UI2.WinForms** — modern WinForms UI
+- **LiveChartsCore.SkiaSharpView.WinForms** — dashboards and reports
 - **RestSharp** — HTTP API requests
 - **Newtonsoft.Json** — JSON parsing and serialization
-- **Entity Framework 6** — ORM and data access for .NET Framework
-- **System.Data.SQLite** — embedded local database provider
-- **BCrypt.Net** — password hashing
-- **Serilog** — application logging
+- **EntityFramework 6** — ORM and data access for .NET Framework
+- **System.Data.SQLite.Core** + **System.Data.SQLite.EF6** — embedded local database provider and EF6 integration
+- **BCrypt.Net-Next** — password hashing
+- **Serilog** + **Serilog.Sinks.File** — application logging
+
+### Installed baseline
+The current project package line is:
+- `Guna.UI2.WinForms` `2.0.4.7`
+- `LiveChartsCore` `2.0.0`
+- `LiveChartsCore.SkiaSharpView` `2.0.0`
+- `LiveChartsCore.SkiaSharpView.WinForms` `2.0.0`
+- `RestSharp` `114.0.0`
+- `Newtonsoft.Json` `13.0.4`
+- `EntityFramework` `6.5.1`
+- `System.Data.SQLite.Core` `1.0.119.0`
+- `System.Data.SQLite.EF6` `1.0.119.0`
+- `BCrypt.Net-Next` `4.1.0`
+- `Serilog` `4.3.1`
+- `Serilog.Sinks.File` `7.0.0`
+
+### Package note
+- `ToastNotifications` is not currently installed in the project. If notifications are implemented before another equivalent is chosen, install a WinForms-compatible toast package and keep usage visible in the UI flow.
+- Keep all `System.Data.SQLite*` packages on the same version line. For this project, use the classic `1.0.119.0` line with EF6.
 
 ### Language/runtime
 - C#
