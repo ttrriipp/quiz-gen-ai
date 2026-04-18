@@ -205,6 +205,13 @@ namespace QuizGenAI.Forms.Teacher
                 return;
             }
 
+            if (sectionKey == "reports")
+            {
+                OpenReports();
+                ShowSection("dashboard");
+                return;
+            }
+
             ShowSection(sectionKey);
         }
 
@@ -232,15 +239,6 @@ namespace QuizGenAI.Forms.Teacher
                         "Quiz workspace is ready",
                         "Next step: build the teacher quiz list, search, filters, and quiz editor flow.",
                         new[] { "Search and filter bar", "Quiz cards with status badges", "New AI Quiz and manual editor entry points" });
-                    break;
-
-                case "reports":
-                    _lblPageTitle.Text = "Reports";
-                    _lblPageDescription.Text = "Charts and analytics will sit on this screen after quiz flow is complete.";
-                    RenderPlaceholderView(
-                        "Reports area is reserved",
-                        "This shell already separates reporting from quiz management so chart work can be added cleanly.",
-                        new[] { "Average score and pass/fail cards", "Subject mastery chart host", "Recent submissions table area" });
                     break;
 
                 default:
@@ -511,6 +509,16 @@ namespace QuizGenAI.Forms.Teacher
         private void OpenQuizManager()
         {
             using (var form = new TeacherQuizzesForm())
+            {
+                form.CurrentUserId = CurrentUserId;
+                form.DisplayName = DisplayName;
+                form.ShowDialog(this);
+            }
+        }
+
+        private void OpenReports()
+        {
+            using (var form = new ReportsForm())
             {
                 form.CurrentUserId = CurrentUserId;
                 form.DisplayName = DisplayName;

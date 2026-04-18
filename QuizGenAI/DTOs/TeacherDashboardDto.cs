@@ -41,5 +41,6 @@ namespace QuizGenAI.DTOs
     {
         public string SubjectName { get; set; }
         public double AverageScore { get; set; }
+        public int AttemptCount { get; set; }
     }
 }

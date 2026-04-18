@@ -9,6 +9,77 @@ namespace QuizGenAI.Services
 {
     public class ReportService
     {
+        public TeacherReportsDto GetTeacherReports()
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                var submittedAttempts = context.StudentAttempts
+                    .Include(x => x.Student)
+                    .Include(x => x.Quiz.Subject)
+                    .Include(x => x.Answers.Select(a => a.Question))
+                    .Where(x => x.SubmittedAt.HasValue)
+                    .ToList();
+
+                var reports = new TeacherReportsDto
+                {
+                    AverageScore = submittedAttempts.Count == 0 ? 0 : Math.Round(submittedAttempts.Average(x => x.ScorePercentage ?? 0), 1),
+                    PassCount = submittedAttempts.Count(x => (x.ScorePercentage ?? 0) >= 75),
+                    FailCount = submittedAttempts.Count(x => (x.ScorePercentage ?? 0) < 75)
+                };
+
+                reports.SubjectPerformance = submittedAttempts
+                    .Where(x => x.Quiz != null && x.Quiz.Subject != null)
+                    .GroupBy(x => x.Quiz.Subject.Name)
+                    .Select(x => new SubjectPerformanceDto
+                    {
+                        SubjectName = x.Key,
+                        AverageScore = Math.Round(x.Average(y => y.ScorePercentage ?? 0), 1),
+                        AttemptCount = x.Count()
+                    })
+                    .OrderByDescending(x => x.AverageScore)
+                    .Take(6)
+                    .ToList();
+
+                reports.RecentSubmissions = submittedAttempts
+                    .OrderByDescending(x => x.SubmittedAt)
+                    .Take(8)
+                    .Select(x => new RecentSubmissionDto
+                    {
+                        StudentName = x.Student != null ? x.Student.Name : "Unknown Student",
+                        QuizTitle = x.Quiz != null ? x.Quiz.Title : "Unknown Quiz",
+                        ScorePercentage = Math.Round(x.ScorePercentage ?? 0, 1),
+                        SubmittedAtDisplay = x.SubmittedAt.HasValue ? x.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending"
+                    })
+                    .ToList();
+
+                reports.HardestQuestions = submittedAttempts
+                    .SelectMany(x => x.Answers
+                        .Where(a => a.Question != null)
+                        .Select(a => new
+                        {
+                            QuizTitle = x.Quiz != null ? x.Quiz.Title : "Quiz",
+                            SubjectName = x.Quiz != null && x.Quiz.Subject != null ? x.Quiz.Subject.Name : "Unknown Subject",
+                            QuestionText = a.Question.Text,
+                            IsCorrect = a.SelectedChoiceId.HasValue && a.IsCorrect
+                        }))
+                    .GroupBy(x => new { x.QuizTitle, x.SubjectName, x.QuestionText })
+                    .Select(x => new HardestQuestionDto
+                    {
+                        QuizTitle = x.Key.QuizTitle,
+                        SubjectName = x.Key.SubjectName,
+                        QuestionText = x.Key.QuestionText,
+                        Attempts = x.Count(),
+                        CorrectRate = Math.Round(x.Average(y => y.IsCorrect ? 100D : 0D), 1)
+                    })
+                    .OrderBy(x => x.CorrectRate)
+                    .ThenByDescending(x => x.Attempts)
+                    .Take(6)
+                    .ToList();
+
+                return reports;
+            }
+        }
+
         public StudentResultsDto GetStudentResults(int studentId)
         {
             using (var context = new QuizGenAIDbContext())
@@ -108,7 +179,8 @@ namespace QuizGenAI.Services
                     .Select(x => new SubjectPerformanceDto
                     {
                         SubjectName = x.Key,
-                        AverageScore = Math.Round(x.Average(y => y.ScorePercentage ?? 0), 1)
+                        AverageScore = Math.Round(x.Average(y => y.ScorePercentage ?? 0), 1),
+                        AttemptCount = x.Count()
                     })
                     .OrderByDescending(x => x.AverageScore)
                     .Take(5)
