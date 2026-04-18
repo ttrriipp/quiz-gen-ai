@@ -60,14 +60,14 @@ Use these packages unless implementation constraints force an equivalent from th
 - **ToastNotifications** — alerts and UX feedback
 - **RestSharp** — HTTP API requests
 - **Newtonsoft.Json** — JSON parsing and serialization
-- **Entity Framework Core** — ORM and data access
-- **SQLite** — embedded local database
+- **Entity Framework 6** — ORM and data access for .NET Framework
+- **System.Data.SQLite** — embedded local database provider
 - **BCrypt.Net** — password hashing
 - **Serilog** — application logging
 
 ### Language/runtime
 - C#
-- .NET WinForms
+- .NET Framework 4.8 WinForms
 - SQLite local database
 
 ---
@@ -390,7 +390,7 @@ Agents should follow this order unless explicitly redirected.
 
 1. finalize scope, enums, schema
 2. set up project and install packages
-3. configure SQLite + EF Core + migrations
+3. configure SQLite + EF6 data access and database initialization
 4. seed initial users/subjects
 5. build login and role routing
 6. build teacher/student shell layouts
@@ -547,7 +547,7 @@ When an AI agent works on a task, it should:
 6. keep UI and business logic reasonably separated
 
 ### Good tasks for agents
-- create EF models and DbContext relationships
+- create EF6 models and DbContext relationships
 - build login form and auth flow
 - implement teacher quiz cards UI
 - add AI quiz generation service and DTOs
@@ -611,4 +611,3 @@ The minimum viable project must still prove package usage and core workflow.
 - keep AI generation **review-first**, never auto-publish
 - keep package usage visible and explainable
 - optimize for a strong school project/demo, not overengineering
-
