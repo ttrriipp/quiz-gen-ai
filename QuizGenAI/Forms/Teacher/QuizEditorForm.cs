@@ -38,6 +38,7 @@ namespace QuizGenAI.Forms.Teacher
 
         public int CurrentUserId { get; set; }
         public int? QuizId { get; set; }
+        public QuizEditorDto InitialQuizData { get; set; }
 
         protected override void OnShown(EventArgs e)
         {
@@ -344,6 +345,13 @@ namespace QuizGenAI.Forms.Teacher
 
         private void LoadQuizIfNeeded()
         {
+            if (InitialQuizData != null)
+            {
+                LoadQuizData(InitialQuizData);
+                BeginNewQuestion();
+                return;
+            }
+
             if (!QuizId.HasValue)
             {
                 BeginNewQuestion();
@@ -351,6 +359,12 @@ namespace QuizGenAI.Forms.Teacher
             }
 
             var quiz = _quizService.GetQuizEditor(QuizId.Value);
+            LoadQuizData(quiz);
+            BeginNewQuestion();
+        }
+
+        private void LoadQuizData(QuizEditorDto quiz)
+        {
             _txtTitle.Text = quiz.Title;
             _txtTopic.Text = quiz.Topic;
             _nudDuration.Value = quiz.DurationMinutes > _nudDuration.Maximum ? _nudDuration.Maximum : quiz.DurationMinutes;
@@ -368,7 +382,6 @@ namespace QuizGenAI.Forms.Teacher
 
             _questions = quiz.Questions ?? new List<QuizQuestionEditorDto>();
             RefreshQuestionList();
-            BeginNewQuestion();
         }
 
         private void RefreshQuestionList()

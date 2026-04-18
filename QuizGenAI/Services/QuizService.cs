@@ -90,6 +90,7 @@ namespace QuizGenAI.Services
                     Difficulty = quiz.Difficulty,
                     DurationMinutes = quiz.DurationMinutes,
                     Status = quiz.Status,
+                    IsAiGenerated = quiz.AiGenerated,
                     Questions = quiz.Questions
                         .OrderBy(x => x.OrderIndex)
                         .Select(x => new QuizQuestionEditorDto
@@ -125,6 +126,7 @@ namespace QuizGenAI.Services
 
                 var now = DateTime.UtcNow;
                 Quiz quiz;
+                var isNewQuiz = quizEditor.Id <= 0;
 
                 if (quizEditor.Id > 0)
                 {
@@ -162,6 +164,7 @@ namespace QuizGenAI.Services
                 quiz.DurationMinutes = quizEditor.DurationMinutes;
                 quiz.Status = QuizStatus.Draft;
                 quiz.UpdatedAt = now;
+                quiz.AiGenerated = quizEditor.IsAiGenerated;
 
                 var questionOrder = 1;
                 foreach (var questionEditor in quizEditor.Questions)
@@ -194,6 +197,23 @@ namespace QuizGenAI.Services
                 }
 
                 context.SaveChanges();
+
+                if (isNewQuiz &&
+                    quizEditor.IsAiGenerated &&
+                    !string.IsNullOrWhiteSpace(quizEditor.AiGenerationPrompt))
+                {
+                    context.AiGenerations.Add(new AiGeneration
+                    {
+                        QuizId = quiz.Id,
+                        Prompt = quizEditor.AiGenerationPrompt,
+                        RawResponseJson = quizEditor.AiGenerationRawResponseJson,
+                        Provider = quizEditor.AiGenerationProvider,
+                        ModelName = quizEditor.AiGenerationModelName,
+                        CreatedAt = now
+                    });
+                    context.SaveChanges();
+                }
+
                 return quiz.Id;
             }
         }

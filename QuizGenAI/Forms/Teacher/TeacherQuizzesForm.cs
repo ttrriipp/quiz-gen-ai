@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
@@ -100,12 +101,17 @@ namespace QuizGenAI.Forms.Teacher
             btnNewQuiz.Location = new Point(530, 4);
             btnNewQuiz.Click += delegate { OpenEditor(null); };
 
+            var btnNewAiQuiz = CreateActionButton("New AI Quiz");
+            btnNewAiQuiz.Width = 116;
+            btnNewAiQuiz.Location = new Point(688, 4);
+            btnNewAiQuiz.Click += async delegate { await OpenAiGeneratorAsync(); };
+
             var btnClose = new Button
             {
                 Text = "Close",
                 Width = 96,
                 Height = 34,
-                Location = new Point(688, 4),
+                Location = new Point(814, 4),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
             };
@@ -114,6 +120,7 @@ namespace QuizGenAI.Forms.Teacher
             filtersPanel.Controls.Add(_txtSearch);
             filtersPanel.Controls.Add(_cmbStatus);
             filtersPanel.Controls.Add(btnNewQuiz);
+            filtersPanel.Controls.Add(btnNewAiQuiz);
             filtersPanel.Controls.Add(btnClose);
 
             topPanel.Controls.Add(filtersPanel);
@@ -318,6 +325,30 @@ namespace QuizGenAI.Forms.Teacher
                     LoadQuizCards();
                 }
             }
+        }
+
+        private async Task OpenAiGeneratorAsync()
+        {
+            using (var generatorForm = new AiQuizGeneratorForm())
+            {
+                if (generatorForm.ShowDialog(this) != DialogResult.OK || generatorForm.GeneratedResult == null)
+                {
+                    return;
+                }
+
+                using (var editorForm = new QuizEditorForm())
+                {
+                    editorForm.CurrentUserId = CurrentUserId;
+                    editorForm.InitialQuizData = generatorForm.GeneratedResult.Quiz;
+
+                    if (editorForm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        LoadQuizCards();
+                    }
+                }
+            }
+
+            await Task.CompletedTask;
         }
 
         private void DeleteQuiz(QuizListItemDto quiz)

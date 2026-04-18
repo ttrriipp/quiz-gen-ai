@@ -17,6 +17,11 @@ namespace QuizGenAI.DTOs
         public QuizDifficulty Difficulty { get; set; }
         public int DurationMinutes { get; set; }
         public QuizStatus Status { get; set; }
+        public bool IsAiGenerated { get; set; }
+        public string AiGenerationPrompt { get; set; }
+        public string AiGenerationRawResponseJson { get; set; }
+        public string AiGenerationProvider { get; set; }
+        public string AiGenerationModelName { get; set; }
         public List<QuizQuestionEditorDto> Questions { get; set; }
     }
 

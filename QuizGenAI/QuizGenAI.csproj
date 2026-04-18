@@ -96,6 +96,7 @@
     <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
     </Reference>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite, Version=1.0.119.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
@@ -148,6 +149,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DTOs\AiQuizGenerationResultDto.cs" />
+    <Compile Include="DTOs\AiQuizQuestionDto.cs" />
+    <Compile Include="DTOs\AiQuizRequestDto.cs" />
     <Compile Include="DTOs\LoginResultDto.cs" />
     <Compile Include="DTOs\QuizEditorDto.cs" />
     <Compile Include="DTOs\QuizListItemDto.cs" />
@@ -189,6 +193,9 @@
     </Compile>
     <Compile Include="Forms\Student\StudentResultsForm.Designer.cs">
       <DependentUpon>StudentResultsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Teacher\AiQuizGeneratorForm.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\Teacher\QuizEditorForm.cs">
       <SubType>Form</SubType>
@@ -252,6 +259,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="Services\AuthService.cs" />
+    <Compile Include="Services\AiQuizService.cs" />
     <Compile Include="Services\QuizService.cs" />
   </ItemGroup>
   <ItemGroup>
