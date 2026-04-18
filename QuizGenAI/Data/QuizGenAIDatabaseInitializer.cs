@@ -1,14 +1,19 @@
 using System;
-using System.Data.Entity;
+using System.Linq;
 using QuizGenAI.Enums;
 using QuizGenAI.Models;
 
 namespace QuizGenAI.Data
 {
-    public class QuizGenAIDatabaseInitializer : CreateDatabaseIfNotExists<QuizGenAIDbContext>
+    public static class QuizGenAIDatabaseInitializer
     {
-        protected override void Seed(QuizGenAIDbContext context)
+        public static void SeedIfNeeded(QuizGenAIDbContext context)
         {
+            if (context.Users.Any())
+            {
+                return;
+            }
+
             var now = DateTime.UtcNow;
 
             var adminUser = new User
@@ -52,8 +57,6 @@ namespace QuizGenAI.Data
             context.Subjects.Add(new Subject { Name = "English", CreatedAt = now });
 
             context.SaveChanges();
-
-            base.Seed(context);
         }
     }
 }
