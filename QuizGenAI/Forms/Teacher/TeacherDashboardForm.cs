@@ -17,6 +17,7 @@ namespace QuizGenAI.Forms.Teacher
         private Label _lblPageDescription;
         private Panel _contentHost;
         private Label _lblGreeting;
+        private Form _hostedContentForm;
         private string _displayName = "Teacher";
         public int CurrentUserId { get; set; }
 
@@ -200,20 +201,6 @@ namespace QuizGenAI.Forms.Teacher
             }
 
             var sectionKey = Convert.ToString(button.Tag);
-            if (sectionKey == "quizzes")
-            {
-                OpenQuizManager();
-                ShowSection("dashboard");
-                return;
-            }
-
-            if (sectionKey == "reports")
-            {
-                OpenReports();
-                ShowSection("dashboard");
-                return;
-            }
-
             ShowSection(sectionKey);
         }
 
@@ -236,11 +223,14 @@ namespace QuizGenAI.Forms.Teacher
 
                 case "quizzes":
                     _lblPageTitle.Text = "Quizzes";
-                    _lblPageDescription.Text = "Manual and AI-generated quizzes will be managed here next.";
-                    RenderPlaceholderView(
-                        "Quiz workspace is ready",
-                        "Next step: build the teacher quiz list, search, filters, and quiz editor flow.",
-                        new[] { "Search and filter bar", "Quiz cards with status badges", "New AI Quiz and manual editor entry points" });
+                    _lblPageDescription.Text = "Manage draft, published, and archived quizzes without leaving the teacher shell.";
+                    RenderHostedForm(CreateHostedQuizManager());
+                    break;
+
+                case "reports":
+                    _lblPageTitle.Text = "Reports";
+                    _lblPageDescription.Text = "Review teacher analytics and reporting inside the same workspace.";
+                    RenderHostedForm(CreateHostedReportsView());
                     break;
 
                 case "logs":
@@ -259,6 +249,7 @@ namespace QuizGenAI.Forms.Teacher
 
         private void RenderDashboardView()
         {
+            ClearHostedContentForm();
             _contentHost.Controls.Clear();
             var dashboard = _reportService.GetTeacherDashboard();
 
@@ -325,12 +316,14 @@ namespace QuizGenAI.Forms.Teacher
 
         private void RenderPlaceholderView(string title, string description, string[] bulletPoints)
         {
+            ClearHostedContentForm();
             _contentHost.Controls.Clear();
             _contentHost.Controls.Add(CreateInsightPanel(title, description, bulletPoints, DockStyle.Top, 420));
         }
 
         private void RenderLogsView()
         {
+            ClearHostedContentForm();
             _contentHost.Controls.Clear();
 
             var root = new TableLayoutPanel
@@ -422,6 +415,38 @@ namespace QuizGenAI.Forms.Teacher
             root.Controls.Add(summaryPanel, 0, 0);
             root.Controls.Add(viewerPanel, 0, 1);
             _contentHost.Controls.Add(root);
+        }
+
+        private void RenderHostedForm(Form form)
+        {
+            ClearHostedContentForm();
+            _contentHost.Controls.Clear();
+
+            _hostedContentForm = form;
+            _hostedContentForm.TopLevel = false;
+            _hostedContentForm.FormBorderStyle = FormBorderStyle.None;
+            _hostedContentForm.Dock = DockStyle.Fill;
+            _hostedContentForm.StartPosition = FormStartPosition.Manual;
+            _hostedContentForm.Padding = new Padding(0);
+
+            _contentHost.Controls.Add(_hostedContentForm);
+            _hostedContentForm.Show();
+        }
+
+        private void ClearHostedContentForm()
+        {
+            if (_hostedContentForm == null)
+            {
+                return;
+            }
+
+            if (_contentHost.Controls.Contains(_hostedContentForm))
+            {
+                _contentHost.Controls.Remove(_hostedContentForm);
+            }
+
+            _hostedContentForm.Dispose();
+            _hostedContentForm = null;
         }
 
         private Panel CreateHeroPanel(string title, string description, string buttonText)
@@ -635,24 +660,24 @@ namespace QuizGenAI.Forms.Teacher
                 bullets.ToArray());
         }
 
-        private void OpenQuizManager()
+        private Form CreateHostedQuizManager()
         {
-            using (var form = new TeacherQuizzesForm())
+            return new TeacherQuizzesForm
             {
-                form.CurrentUserId = CurrentUserId;
-                form.DisplayName = DisplayName;
-                form.ShowDialog(this);
-            }
+                CurrentUserId = CurrentUserId,
+                DisplayName = DisplayName,
+                TopLevel = false
+            };
         }
 
-        private void OpenReports()
+        private Form CreateHostedReportsView()
         {
-            using (var form = new ReportsForm())
+            return new ReportsForm
             {
-                form.CurrentUserId = CurrentUserId;
-                form.DisplayName = DisplayName;
-                form.ShowDialog(this);
-            }
+                CurrentUserId = CurrentUserId,
+                DisplayName = DisplayName,
+                TopLevel = false
+            };
         }
     }
 }
