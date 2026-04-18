@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace QuizGenAI.Forms.Teacher
 {
-    public partial class ReportsForms : Form
+    public partial class ReportsForm : Form
     {
-        public ReportsForms()
+        public ReportsForm()
         {
             InitializeComponent();
         }
