@@ -11,6 +11,7 @@ namespace QuizGenAI.Forms.Student
     public partial class StudentQuizzesForm : Form
     {
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
+        private readonly ExamService _examService = new ExamService();
         private readonly QuizService _quizService = new QuizService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
@@ -505,11 +506,21 @@ namespace QuizGenAI.Forms.Student
                 return;
             }
 
-            MessageBox.Show(
-                "Quiz discovery and start gating are now working. The timed exam screen is the next implementation step.",
-                "Exam Flow Pending",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            try
+            {
+                var attemptId = _examService.StartAttempt(_currentUserId, quiz.Id);
+                using (var examForm = new ExamForm(_currentUserId, attemptId))
+                {
+                    examForm.Text = quiz.Title;
+                    examForm.ShowDialog(this);
+                }
+
+                RenderQuizLandingView();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Unable To Start Quiz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void RenderPlaceholderView(string title, string description, string[] bulletPoints)

@@ -152,6 +152,10 @@
     <Compile Include="DTOs\AiQuizGenerationResultDto.cs" />
     <Compile Include="DTOs\AiQuizQuestionDto.cs" />
     <Compile Include="DTOs\AiQuizRequestDto.cs" />
+    <Compile Include="DTOs\ExamChoiceDto.cs" />
+    <Compile Include="DTOs\ExamQuestionDto.cs" />
+    <Compile Include="DTOs\ExamSessionDto.cs" />
+    <Compile Include="DTOs\ExamSubmitResultDto.cs" />
     <Compile Include="DTOs\LoginResultDto.cs" />
     <Compile Include="DTOs\QuizEditorDto.cs" />
     <Compile Include="DTOs\QuizListItemDto.cs" />
@@ -262,6 +266,7 @@
     </Compile>
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AiQuizService.cs" />
+    <Compile Include="Services\ExamService.cs" />
     <Compile Include="Services\QuizService.cs" />
     <Compile Include="Services\ReportService.cs" />
   </ItemGroup>
