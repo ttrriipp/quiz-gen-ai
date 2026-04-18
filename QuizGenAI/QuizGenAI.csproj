@@ -156,6 +156,7 @@
     <Compile Include="DTOs\QuizEditorDto.cs" />
     <Compile Include="DTOs\QuizListItemDto.cs" />
     <Compile Include="DTOs\SubjectOptionDto.cs" />
+    <Compile Include="DTOs\TeacherDashboardDto.cs" />
     <Compile Include="Enums\QuestionType.cs" />
     <Compile Include="Enums\QuizDifficulty.cs" />
     <Compile Include="Enums\QuizStatus.cs" />
@@ -261,6 +262,7 @@
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AiQuizService.cs" />
     <Compile Include="Services\QuizService.cs" />
+    <Compile Include="Services\ReportService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using QuizGenAI.DTOs;
+using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
 {
     public partial class TeacherDashboardForm : Form
     {
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
+        private readonly ReportService _reportService = new ReportService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _contentHost;
@@ -254,6 +257,7 @@ namespace QuizGenAI.Forms.Teacher
         private void RenderDashboardView()
         {
             _contentHost.Controls.Clear();
+            var dashboard = _reportService.GetTeacherDashboard();
 
             var root = new TableLayoutPanel
             {
@@ -284,9 +288,9 @@ namespace QuizGenAI.Forms.Teacher
             stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
-            stats.Controls.Add(CreateMetricCard("Total Students", "0", "Will be populated from student records once reports are wired."), 0, 0);
-            stats.Controls.Add(CreateMetricCard("Total Quizzes", "0", "Quiz CRUD comes next, so this card is the future home for that count."), 1, 0);
-            stats.Controls.Add(CreateMetricCard("Average Score", "0%", "Appears after exam attempts and scoring are implemented."), 2, 0);
+            stats.Controls.Add(CreateMetricCard("Total Students", dashboard.TotalStudents.ToString(), "Students with the student role in the local database."), 0, 0);
+            stats.Controls.Add(CreateMetricCard("Total Quizzes", dashboard.TotalQuizzes.ToString(), "All draft, published, and archived quizzes."), 1, 0);
+            stats.Controls.Add(CreateMetricCard("Average Score", dashboard.AverageScore.ToString("0.0") + "%", "Average across submitted attempts."), 2, 0);
 
             var bottom = new TableLayoutPanel
             {
@@ -299,24 +303,16 @@ namespace QuizGenAI.Forms.Teacher
             bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42F));
 
             bottom.Controls.Add(CreateInsightPanel(
-                "Dashboard roadmap",
-                "This shell is ready for the next sequence in AGENTS.md.",
+                "Status Overview",
+                string.Format("{0} submissions recorded so far.", dashboard.SubmittedAttempts),
                 new[]
                 {
-                    "Teacher quiz list and manual quiz editor",
-                    "AI quiz generation review-first workflow",
-                    "Dashboard metrics and LiveCharts-based reports"
+                    string.Format("Draft quizzes: {0}", dashboard.DraftQuizzes),
+                    string.Format("Published quizzes: {0}", dashboard.PublishedQuizzes),
+                    string.Format("Archived quizzes: {0}", dashboard.ArchivedQuizzes)
                 }), 0, 0);
 
-            bottom.Controls.Add(CreateInsightPanel(
-                "Navigation status",
-                "The layout now separates key teacher/admin areas.",
-                new[]
-                {
-                    "Dashboard is the landing view",
-                    "Quizzes has a dedicated slot",
-                    "Reports and Logs are reserved for later steps"
-                }), 1, 0);
+            bottom.Controls.Add(CreateRecentSubmissionsPanel(dashboard), 1, 0);
 
             root.Controls.Add(hero, 0, 0);
             root.Controls.Add(stats, 0, 1);
@@ -481,6 +477,35 @@ namespace QuizGenAI.Forms.Teacher
         private static string BuildBulletList(IEnumerable<string> bulletPoints)
         {
             return "• " + string.Join(Environment.NewLine + "• ", bulletPoints);
+        }
+
+        private Control CreateRecentSubmissionsPanel(TeacherDashboardDto dashboard)
+        {
+            var bullets = new List<string>();
+
+            foreach (var item in dashboard.RecentSubmissions)
+            {
+                bullets.Add(string.Format("{0}: {1} scored {2:0.0}% on {3}", item.StudentName, item.QuizTitle, item.ScorePercentage, item.SubmittedAtDisplay));
+            }
+
+            if (bullets.Count == 0)
+            {
+                bullets.Add("No submitted attempts yet.");
+            }
+
+            if (dashboard.SubjectPerformance.Count > 0)
+            {
+                bullets.Add("Top subject averages:");
+                foreach (var subject in dashboard.SubjectPerformance)
+                {
+                    bullets.Add(string.Format("{0}: {1:0.0}%", subject.SubjectName, subject.AverageScore));
+                }
+            }
+
+            return CreateInsightPanel(
+                "Recent Activity",
+                "Latest student submissions and subject performance snapshots.",
+                bullets.ToArray());
         }
 
         private void OpenQuizManager()
