@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Student
@@ -760,13 +761,14 @@ namespace QuizGenAI.Forms.Student
 
             if (!quiz.CanStart)
             {
-                MessageBox.Show(quiz.AvailabilityLabel, "Quiz Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                NotificationHelper.ShowInfo(this, "Quiz Unavailable", quiz.AvailabilityLabel);
                 return;
             }
 
             try
             {
                 var attemptId = _examService.StartAttempt(_currentUserId, quiz.Id);
+                NotificationHelper.ShowInfo(this, "Exam Started", string.Format("Starting \"{0}\" now.", quiz.Title));
                 using (var examForm = new ExamForm(_currentUserId, attemptId))
                 {
                     examForm.Text = quiz.Title;
@@ -777,7 +779,8 @@ namespace QuizGenAI.Forms.Student
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Unable To Start Quiz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Unable to start quiz. QuizId={QuizId} StudentId={StudentId}", quiz.Id, _currentUserId);
+                NotificationHelper.ShowError(this, "Unable To Start Quiz", ex.Message);
             }
         }
 

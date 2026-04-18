@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Services;
@@ -241,13 +243,16 @@ namespace QuizGenAI.Forms.Teacher
                         new[] { "Search and filter bar", "Quiz cards with status badges", "New AI Quiz and manual editor entry points" });
                     break;
 
+                case "logs":
+                    _lblPageTitle.Text = "Logs";
+                    _lblPageDescription.Text = "Structured Serilog output from the app runtime.";
+                    RenderLogsView();
+                    break;
+
                 default:
                     _lblPageTitle.Text = "Logs";
-                    _lblPageDescription.Text = "Operational history and audit events can plug into this slot later.";
-                    RenderPlaceholderView(
-                        "Logs section placeholder",
-                        "Serilog output is part of the required stack; this navigation slot keeps the layout ready for it.",
-                        new[] { "Authentication events", "Quiz publish/update history", "AI request and error logs" });
+                    _lblPageDescription.Text = "Structured Serilog output from the app runtime.";
+                    RenderLogsView();
                     break;
             }
         }
@@ -322,6 +327,101 @@ namespace QuizGenAI.Forms.Teacher
         {
             _contentHost.Controls.Clear();
             _contentHost.Controls.Add(CreateInsightPanel(title, description, bulletPoints, DockStyle.Top, 420));
+        }
+
+        private void RenderLogsView()
+        {
+            _contentHost.Controls.Clear();
+
+            var root = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent
+            };
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 88F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "QuizGenAI",
+                "Logs");
+
+            var logFiles = Directory.Exists(logDirectory)
+                ? Directory.GetFiles(logDirectory, "*.log")
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .ToList()
+                : new List<string>();
+
+            var summaryPanel = CreateSurfacePanel();
+            summaryPanel.Dock = DockStyle.Fill;
+            summaryPanel.Padding = new Padding(22, 18, 22, 18);
+
+            var summaryLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126F));
+
+            var btnRefresh = new Button
+            {
+                Anchor = AnchorStyles.Right,
+                Width = 110,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(15, 118, 110),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = "Refresh",
+                Cursor = Cursors.Hand
+            };
+            btnRefresh.FlatAppearance.BorderSize = 0;
+            btnRefresh.Click += delegate { RenderLogsView(); };
+
+            var lblSummary = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(75, 85, 99),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = logFiles.Count == 0
+                    ? "No log files found yet. Trigger a few actions, then refresh this view."
+                    : string.Format(
+                        "{0} log file(s) found. Showing the latest entries from {1}.",
+                        logFiles.Count,
+                        Path.GetFileName(logFiles.First()))
+            };
+
+            summaryLayout.Controls.Add(lblSummary, 0, 0);
+            summaryLayout.Controls.Add(btnRefresh, 1, 0);
+            summaryPanel.Controls.Add(summaryLayout);
+
+            var viewerPanel = CreateSurfacePanel();
+            viewerPanel.Dock = DockStyle.Fill;
+            viewerPanel.Padding = new Padding(0);
+
+            var txtLogs = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Both,
+                WordWrap = false,
+                BorderStyle = BorderStyle.None,
+                BackColor = Color.White,
+                Font = new Font("Consolas", 9.5F),
+                Text = BuildLogPreview(logFiles)
+            };
+
+            viewerPanel.Controls.Add(txtLogs);
+
+            root.Controls.Add(summaryPanel, 0, 0);
+            root.Controls.Add(viewerPanel, 0, 1);
+            _contentHost.Controls.Add(root);
         }
 
         private Panel CreateHeroPanel(string title, string description, string buttonText)
@@ -475,6 +575,35 @@ namespace QuizGenAI.Forms.Teacher
         private static string BuildBulletList(IEnumerable<string> bulletPoints)
         {
             return "• " + string.Join(Environment.NewLine + "• ", bulletPoints);
+        }
+
+        private static string BuildLogPreview(List<string> logFiles)
+        {
+            if (logFiles == null || logFiles.Count == 0)
+            {
+                return "No logs are available yet.";
+            }
+
+            try
+            {
+                var latestFile = logFiles.First();
+                string[] lines;
+
+                using (var stream = new FileStream(latestFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var reader = new StreamReader(stream))
+                {
+                    var content = reader.ReadToEnd();
+                    lines = content
+                        .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                }
+
+                var tail = lines.Skip(Math.Max(0, lines.Length - 250));
+                return string.Join(Environment.NewLine, tail);
+            }
+            catch (Exception ex)
+            {
+                return "Unable to read the latest log file." + Environment.NewLine + Environment.NewLine + ex.Message;
+            }
         }
 
         private Control CreateRecentSubmissionsPanel(TeacherDashboardDto dashboard)

@@ -35,6 +35,7 @@ namespace QuizGenAI.Services
 
                 if (existingAttempt != null)
                 {
+                    LoggingService.Information("Exam attempt resumed. AttemptId={AttemptId} StudentId={StudentId} QuizId={QuizId}", existingAttempt.Id, studentId, quizId);
                     return existingAttempt.Id;
                 }
 
@@ -67,6 +68,7 @@ namespace QuizGenAI.Services
 
                 context.StudentAttempts.Add(attempt);
                 context.SaveChanges();
+                LoggingService.Information("Exam started. AttemptId={AttemptId} StudentId={StudentId} QuizId={QuizId}", attempt.Id, studentId, quizId);
                 return attempt.Id;
             }
         }
@@ -198,6 +200,15 @@ namespace QuizGenAI.Services
                 attempt.TimeSpentSeconds = Math.Max(0, (int)Math.Round((now - attempt.StartedAt).TotalSeconds));
                 attempt.ScorePercentage = score;
                 context.SaveChanges();
+
+                LoggingService.Information(
+                    "Exam submitted. AttemptId={AttemptId} StudentId={StudentId} AutoSubmitted={AutoSubmitted} Score={Score} CorrectAnswers={CorrectAnswers} TotalQuestions={TotalQuestions}",
+                    attempt.Id,
+                    studentId,
+                    autoSubmitted,
+                    Math.Round(score, 1),
+                    correctAnswers,
+                    totalQuestions);
 
                 return new ExamSubmitResultDto
                 {

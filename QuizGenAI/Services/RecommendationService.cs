@@ -43,6 +43,7 @@ namespace QuizGenAI.Services
             var apiKey = ConfigurationManager.AppSettings["AiApiKey"];
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
+                LoggingService.Warning("Recommendation generation is using fallback because no AI API base URL is configured. AttemptId={AttemptId}", attemptId);
                 return BuildFallbackRecommendations(context, "Demo Fallback");
             }
 
@@ -83,15 +84,18 @@ namespace QuizGenAI.Services
                         var responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                         if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(responseContent))
                         {
+                            LoggingService.Warning("Recommendation generation fell back after AI API error. AttemptId={AttemptId} StatusCode={StatusCode}", attemptId, response.StatusCode);
                             return BuildFallbackRecommendations(context, "Fallback After AI Error");
                         }
 
                         var recommendations = ParseRecommendations(responseContent);
                         if (recommendations.Count == 0)
                         {
+                            LoggingService.Warning("Recommendation generation fell back after empty AI response. AttemptId={AttemptId}", attemptId);
                             return BuildFallbackRecommendations(context, "Fallback After Empty AI Response");
                         }
 
+                        LoggingService.Information("Recommendation generation completed successfully. AttemptId={AttemptId} RecommendationCount={RecommendationCount}", attemptId, recommendations.Count);
                         return new RecommendationResultDto
                         {
                             UsedFallback = false,
@@ -102,8 +106,9 @@ namespace QuizGenAI.Services
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.Error(ex, "Recommendation generation failed and fell back. AttemptId={AttemptId}", attemptId);
                 return BuildFallbackRecommendations(context, "Fallback After AI Error");
             }
         }

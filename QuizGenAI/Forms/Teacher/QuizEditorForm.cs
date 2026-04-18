@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
@@ -454,7 +455,7 @@ namespace QuizGenAI.Forms.Teacher
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Question Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                NotificationHelper.ShowWarning(this, "Question Validation", ex.Message);
             }
         }
 
@@ -462,7 +463,7 @@ namespace QuizGenAI.Forms.Teacher
         {
             if (_lstQuestions.SelectedIndex < 0 || _lstQuestions.SelectedIndex >= _questions.Count)
             {
-                MessageBox.Show("Select a question to remove.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                NotificationHelper.ShowInfo(this, "No Selection", "Select a question to remove.");
                 return;
             }
 
@@ -501,12 +502,14 @@ namespace QuizGenAI.Forms.Teacher
 
                 var savedQuizId = _quizService.SaveDraft(dto, CurrentUserId);
                 QuizId = savedQuizId;
+                NotificationHelper.ShowSuccess(this, "Draft Saved", "Quiz draft saved successfully.");
                 DialogResult = DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Save Draft Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Quiz draft save failed. QuizId={QuizId}", QuizId.GetValueOrDefault());
+                NotificationHelper.ShowError(this, "Save Draft Failed", ex.Message);
             }
         }
 

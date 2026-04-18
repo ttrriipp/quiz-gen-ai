@@ -12,6 +12,7 @@ namespace QuizGenAI.Services
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
+                LoggingService.Warning("Login failed because required credentials were missing.");
                 return new LoginResultDto
                 {
                     IsSuccess = false,
@@ -26,6 +27,7 @@ namespace QuizGenAI.Services
                 var user = context.Users.SingleOrDefault(x => x.Email == normalizedEmail);
                 if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 {
+                    LoggingService.Warning("Login failed for {Email}", normalizedEmail);
                     return new LoginResultDto
                     {
                         IsSuccess = false,
@@ -41,6 +43,7 @@ namespace QuizGenAI.Services
 
                 if (!Enum.IsDefined(typeof(UserRole), role))
                 {
+                    LoggingService.Warning("Login failed for {Email} because no valid role is assigned.", normalizedEmail);
                     return new LoginResultDto
                     {
                         IsSuccess = false,
@@ -48,6 +51,7 @@ namespace QuizGenAI.Services
                     };
                 }
 
+                LoggingService.Information("Login succeeded for {Email} with role {Role}", normalizedEmail, role);
                 return new LoginResultDto
                 {
                     IsSuccess = true,

@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Student
@@ -51,7 +52,8 @@ namespace QuizGenAI.Forms.Student
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Unable To Start Exam", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Unable to load exam session. AttemptId={AttemptId} StudentId={StudentId}", _attemptId, _studentId);
+                NotificationHelper.ShowError(this, "Unable To Start Exam", ex.Message);
                 Close();
             }
         }
@@ -598,7 +600,7 @@ namespace QuizGenAI.Forms.Student
             if (!_timeWarningShown && _remainingSeconds > 0 && _remainingSeconds <= 60)
             {
                 _timeWarningShown = true;
-                MessageBox.Show("One minute remaining. Review your unanswered questions now.", "Time Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                NotificationHelper.ShowWarning(this, "Time Warning", "One minute remaining. Review your unanswered questions now.");
             }
 
             if (_remainingSeconds == 0)
@@ -614,7 +616,7 @@ namespace QuizGenAI.Forms.Student
                 return;
             }
 
-            MessageBox.Show("Time is up. Your exam will be submitted automatically.", "Exam Time Ended", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            NotificationHelper.ShowInfo(this, "Exam Time Ended", "Time is up. Your exam will be submitted automatically.");
             SubmitExam(true);
         }
 
@@ -637,6 +639,7 @@ namespace QuizGenAI.Forms.Student
                 summary.UsedFallbackRecommendations = recommendations.UsedFallback;
                 summary.RecommendationSourceLabel = recommendations.SourceLabel;
                 summary.WeakAreaSummary = recommendations.WeakAreaSummary;
+                NotificationHelper.ShowSuccess(this, "Exam Submitted", "Your answers were submitted and scored successfully.");
 
                 using (var resultsForm = new StudentResultsForm(summary))
                 {
@@ -651,7 +654,8 @@ namespace QuizGenAI.Forms.Student
             {
                 _isSubmitting = false;
                 _examTimer.Start();
-                MessageBox.Show(ex.Message, "Unable To Submit Exam", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Unable to submit exam. AttemptId={AttemptId} StudentId={StudentId}", _session != null ? _session.AttemptId : 0, _studentId);
+                NotificationHelper.ShowError(this, "Unable To Submit Exam", ex.Message);
             }
         }
 

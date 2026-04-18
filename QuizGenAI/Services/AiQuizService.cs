@@ -22,8 +22,16 @@ namespace QuizGenAI.Services
             var baseUrl = ConfigurationManager.AppSettings["AiApiBaseUrl"];
             var apiKey = ConfigurationManager.AppSettings["AiApiKey"];
 
+            LoggingService.Information(
+                "AI quiz generation started. Subject={Subject} Topic={Topic} Difficulty={Difficulty} QuestionCount={QuestionCount}",
+                request.SubjectName,
+                request.Topic,
+                request.Difficulty,
+                request.QuestionCount);
+
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
+                LoggingService.Warning("AI quiz generation is using the fallback generator because no AI API base URL is configured.");
                 return BuildFallbackResult(request, prompt);
             }
 
@@ -66,6 +74,7 @@ namespace QuizGenAI.Services
                         var details = string.IsNullOrWhiteSpace(responseContent)
                             ? "No response body was returned."
                             : responseContent;
+                        LoggingService.Warning("AI quiz generation failed with status code {StatusCode}.", response.StatusCode);
                         throw new InvalidOperationException(
                             string.Format("AI generation failed with status code {0}.{1}{1}{2}",
                                 response.StatusCode,
@@ -74,6 +83,7 @@ namespace QuizGenAI.Services
                     }
 
                     var normalizedQuestions = ParseQuestions(responseContent);
+                    LoggingService.Information("AI quiz generation completed successfully. Provider={Provider} QuestionCount={QuestionCount}", "Configured AI API", normalizedQuestions.Count);
                     return BuildResultFromQuestions(request, prompt, responseContent, normalizedQuestions, "Configured AI API", "external");
                 }
             }

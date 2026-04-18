@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using System.Windows.Forms;
 using QuizGenAI.Data;
 using QuizGenAI.Forms.Auth;
+using QuizGenAI.Services;
 
 namespace QuizGenAI
 {
@@ -19,8 +20,14 @@ namespace QuizGenAI
             {
                 var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 var dataDirectory = Path.Combine(localAppData, "QuizGenAI", "App_Data");
+                var logDirectory = Path.Combine(localAppData, "QuizGenAI", "Logs");
                 Directory.CreateDirectory(dataDirectory);
                 AppDomain.CurrentDomain.SetData("DataDirectory", dataDirectory);
+
+                LoggingService.Initialize(logDirectory);
+                Application.ThreadException += Application_ThreadException;
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+                Application.ApplicationExit += delegate { LoggingService.CloseAndFlush(); };
 
                 var databasePath = Path.Combine(dataDirectory, "quizgenai.db");
                 if (File.Exists(databasePath) && !HasRequiredSchema(databasePath))
@@ -35,16 +42,30 @@ namespace QuizGenAI
                     QuizGenAIDatabaseInitializer.SeedIfNeeded(context);
                 }
 
+                LoggingService.Information("Application startup completed successfully.");
                 Application.Run(new LoginForm());
             }
             catch (Exception ex)
             {
+                LoggingService.Fatal(ex, "Application startup failed.");
                 MessageBox.Show(
                     ex.ToString(),
                     "Startup Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+                LoggingService.CloseAndFlush();
             }
+        }
+
+        private static void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
+        {
+            LoggingService.Error(e.Exception, "Unhandled UI thread exception.");
+        }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            var exception = e.ExceptionObject as Exception ?? new Exception("Unknown unhandled exception.");
+            LoggingService.Fatal(exception, "Unhandled domain exception. IsTerminating={IsTerminating}", e.IsTerminating);
         }
 
         private static bool HasRequiredSchema(string databasePath)

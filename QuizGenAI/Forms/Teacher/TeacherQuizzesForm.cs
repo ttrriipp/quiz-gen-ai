@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
@@ -362,6 +363,7 @@ namespace QuizGenAI.Forms.Teacher
 
                     if (editorForm.ShowDialog(this) == DialogResult.OK)
                     {
+                        NotificationHelper.ShowSuccess(this, "Quiz Saved", "The AI-generated quiz draft was reviewed and saved.");
                         LoadQuizCards();
                     }
                 }
@@ -386,11 +388,13 @@ namespace QuizGenAI.Forms.Teacher
             try
             {
                 _quizService.DeleteQuiz(quiz.Id, CurrentUserId);
+                NotificationHelper.ShowSuccess(this, "Quiz Deleted", string.Format("Deleted \"{0}\".", quiz.Title));
                 LoadQuizCards();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Delete Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Quiz delete failed. QuizId={QuizId}", quiz.Id);
+                NotificationHelper.ShowError(this, "Delete Failed", ex.Message);
             }
         }
 
@@ -407,11 +411,18 @@ namespace QuizGenAI.Forms.Teacher
                     _quizService.PublishQuiz(quiz.Id, CurrentUserId);
                 }
 
+                NotificationHelper.ShowSuccess(
+                    this,
+                    "Quiz Status Updated",
+                    quiz.Status == QuizStatus.Published
+                        ? string.Format("\"{0}\" moved back to draft.", quiz.Title)
+                        : string.Format("\"{0}\" is now published.", quiz.Title));
                 LoadQuizCards();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Status Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Quiz status update failed. QuizId={QuizId}", quiz.Id);
+                NotificationHelper.ShowError(this, "Status Update Failed", ex.Message);
             }
         }
 
@@ -436,11 +447,13 @@ namespace QuizGenAI.Forms.Teacher
             try
             {
                 _quizService.ArchiveQuiz(quiz.Id, CurrentUserId);
+                NotificationHelper.ShowSuccess(this, "Quiz Archived", string.Format("\"{0}\" was archived.", quiz.Title));
                 LoadQuizCards();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Archive Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Quiz archive failed. QuizId={QuizId}", quiz.Id);
+                NotificationHelper.ShowError(this, "Archive Failed", ex.Message);
             }
         }
 

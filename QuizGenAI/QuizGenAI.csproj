@@ -235,6 +235,7 @@
     <Compile Include="Forms\Teacher\TeacherQuizzesForm.Designer.cs">
       <DependentUpon>TeacherQuizzesForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\NotificationHelper.cs" />
     <Compile Include="Data\QuizGenAIDatabaseInitializer.cs" />
     <Compile Include="Data\QuizGenAIDbContext.cs" />
     <Compile Include="Models\AiGeneration.cs" />
@@ -271,6 +272,7 @@
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AiQuizService.cs" />
     <Compile Include="Services\ExamService.cs" />
+    <Compile Include="Services\LoggingService.cs" />
     <Compile Include="Services\QuizService.cs" />
     <Compile Include="Services\RecommendationService.cs" />
     <Compile Include="Services\ReportService.cs" />

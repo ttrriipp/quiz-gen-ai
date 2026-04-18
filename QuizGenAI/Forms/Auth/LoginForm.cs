@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using QuizGenAI.Enums;
 using QuizGenAI.Forms.Student;
 using QuizGenAI.Forms.Teacher;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Auth
@@ -29,10 +30,11 @@ namespace QuizGenAI.Forms.Auth
                 var result = _authService.Login(txtEmail.Text, txtPassword.Text);
                 if (!result.IsSuccess)
                 {
-                    MessageBox.Show(result.ErrorMessage, "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    NotificationHelper.ShowWarning(this, "Login Failed", result.ErrorMessage);
                     return;
                 }
 
+                NotificationHelper.ShowSuccess(this, "Login Success", string.Format("Welcome back, {0}.", result.DisplayName));
                 Hide();
 
                 using (var nextForm = CreateLandingForm(result.UserId, result.Role, result.DisplayName))
@@ -47,7 +49,8 @@ namespace QuizGenAI.Forms.Auth
             catch (Exception ex)
             {
                 var errorDetails = ex.InnerException != null ? ex.InnerException.ToString() : ex.ToString();
-                MessageBox.Show("Unable to complete login.\r\n\r\n" + errorDetails, "Application Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "Login flow failed unexpectedly.");
+                NotificationHelper.ShowError(this, "Application Error", "Unable to complete login.\r\n\r\n" + errorDetails);
             }
             finally
             {

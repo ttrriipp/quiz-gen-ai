@@ -273,6 +273,12 @@ namespace QuizGenAI.Services
                     context.SaveChanges();
                 }
 
+                LoggingService.Information(
+                    "Quiz draft saved. QuizId={QuizId} UserId={UserId} IsNew={IsNewQuiz} AiGenerated={AiGenerated}",
+                    quiz.Id,
+                    userId,
+                    isNewQuiz,
+                    quiz.AiGenerated);
                 return quiz.Id;
             }
         }
@@ -300,6 +306,8 @@ namespace QuizGenAI.Services
                 context.Questions.RemoveRange(quiz.Questions.ToList());
                 context.Quizzes.Remove(quiz);
                 context.SaveChanges();
+
+                LoggingService.Information("Quiz deleted. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
             }
         }
 
@@ -328,6 +336,8 @@ namespace QuizGenAI.Services
                 quiz.Status = QuizStatus.Published;
                 quiz.UpdatedAt = DateTime.UtcNow;
                 context.SaveChanges();
+
+                LoggingService.Information("Quiz published. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
             }
         }
 
@@ -351,6 +361,8 @@ namespace QuizGenAI.Services
                 quiz.Status = QuizStatus.Draft;
                 quiz.UpdatedAt = DateTime.UtcNow;
                 context.SaveChanges();
+
+                LoggingService.Information("Quiz moved back to draft. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
             }
         }
 
@@ -374,6 +386,8 @@ namespace QuizGenAI.Services
                 quiz.Status = QuizStatus.Archived;
                 quiz.UpdatedAt = DateTime.UtcNow;
                 context.SaveChanges();
+
+                LoggingService.Information("Quiz archived. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
             }
         }
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
@@ -206,12 +207,19 @@ namespace QuizGenAI.Forms.Teacher
                 };
 
                 GeneratedResult = await _aiQuizService.GenerateQuizAsync(request);
+                NotificationHelper.ShowSuccess(
+                    this,
+                    GeneratedResult.UsedFallback ? "AI Draft Ready (Fallback)" : "AI Draft Ready",
+                    GeneratedResult.UsedFallback
+                        ? "The demo fallback generated a draft for review."
+                        : "The AI generated a draft quiz for review.");
                 DialogResult = DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "AI Generation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LoggingService.Error(ex, "AI quiz generation failed in the UI flow.");
+                NotificationHelper.ShowError(this, "AI Generation Failed", ex.Message);
             }
             finally
             {
