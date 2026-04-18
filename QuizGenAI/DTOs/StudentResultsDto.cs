@@ -7,6 +7,7 @@ namespace QuizGenAI.DTOs
         public StudentResultsDto()
         {
             History = new List<StudentResultHistoryItemDto>();
+            LatestRecommendations = new List<StudentRecommendationDto>();
         }
 
         public string StudentName { get; set; }
@@ -14,6 +15,10 @@ namespace QuizGenAI.DTOs
         public int QuizzesTaken { get; set; }
         public double BestScore { get; set; }
         public double LatestScore { get; set; }
+        public string LatestWeakAreaSummary { get; set; }
+        public string RecommendationSourceLabel { get; set; }
+        public bool UsedFallbackRecommendations { get; set; }
+        public List<StudentRecommendationDto> LatestRecommendations { get; set; }
         public List<StudentResultHistoryItemDto> History { get; set; }
     }
 

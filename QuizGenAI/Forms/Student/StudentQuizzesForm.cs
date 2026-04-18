@@ -13,6 +13,7 @@ namespace QuizGenAI.Forms.Student
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
         private readonly ExamService _examService = new ExamService();
         private readonly QuizService _quizService = new QuizService();
+        private readonly RecommendationService _recommendationService = new RecommendationService();
         private readonly ReportService _reportService = new ReportService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
@@ -284,6 +285,24 @@ namespace QuizGenAI.Forms.Student
         {
             _contentHost.Controls.Clear();
             var results = _reportService.GetStudentResults(_currentUserId);
+            if (results.History.Count > 0)
+            {
+                try
+                {
+                    var latestRecommendationResult = _recommendationService.GetRecommendationsForAttempt(_currentUserId, results.History[0].AttemptId);
+                    results.LatestRecommendations = latestRecommendationResult.Recommendations;
+                    results.LatestWeakAreaSummary = latestRecommendationResult.WeakAreaSummary;
+                    results.RecommendationSourceLabel = latestRecommendationResult.SourceLabel;
+                    results.UsedFallbackRecommendations = latestRecommendationResult.UsedFallback;
+                }
+                catch
+                {
+                    results.LatestRecommendations.Clear();
+                    results.LatestWeakAreaSummary = "Recommendations are temporarily unavailable.";
+                    results.RecommendationSourceLabel = "Unavailable";
+                    results.UsedFallbackRecommendations = true;
+                }
+            }
 
             var root = new TableLayoutPanel
             {
@@ -369,6 +388,11 @@ namespace QuizGenAI.Forms.Student
                 Text = "Results history"
             });
 
+            if (results.LatestRecommendations.Count > 0 || !string.IsNullOrWhiteSpace(results.LatestWeakAreaSummary))
+            {
+                panel.Controls.Add(CreateLatestRecommendationPanel(results));
+            }
+
             var flow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -391,6 +415,48 @@ namespace QuizGenAI.Forms.Student
             }
 
             panel.Controls.Add(flow);
+            return panel;
+        }
+
+        private Control CreateLatestRecommendationPanel(StudentResultsDto results)
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 188,
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 14),
+                Padding = new Padding(16, 14, 16, 14)
+            };
+
+            var bulletText = results.LatestRecommendations.Count == 0
+                ? "No recommendation items available."
+                : string.Join(
+                    Environment.NewLine,
+                    results.LatestRecommendations.Select(x => string.Format("• {0}: {1}", x.Title, x.Description)));
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = string.Format(
+                    "Source: {0}\r\n\r\n{1}\r\n\r\n{2}",
+                    string.IsNullOrWhiteSpace(results.RecommendationSourceLabel) ? "Unavailable" : results.RecommendationSourceLabel,
+                    string.IsNullOrWhiteSpace(results.LatestWeakAreaSummary) ? "No weak-area summary available." : results.LatestWeakAreaSummary,
+                    bulletText)
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
+                Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = "Latest study recommendations"
+            });
+
             return panel;
         }
 

@@ -159,6 +159,7 @@
     <Compile Include="DTOs\LoginResultDto.cs" />
     <Compile Include="DTOs\QuizEditorDto.cs" />
     <Compile Include="DTOs\QuizListItemDto.cs" />
+    <Compile Include="DTOs\StudentRecommendationDto.cs" />
     <Compile Include="DTOs\StudentAttemptSummaryDto.cs" />
     <Compile Include="DTOs\StudentQuizListItemDto.cs" />
     <Compile Include="DTOs\StudentResultsDto.cs" />
@@ -270,6 +271,7 @@
     <Compile Include="Services\AiQuizService.cs" />
     <Compile Include="Services\ExamService.cs" />
     <Compile Include="Services\QuizService.cs" />
+    <Compile Include="Services\RecommendationService.cs" />
     <Compile Include="Services\ReportService.cs" />
   </ItemGroup>
   <ItemGroup>

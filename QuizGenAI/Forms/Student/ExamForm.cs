@@ -11,6 +11,7 @@ namespace QuizGenAI.Forms.Student
     public partial class ExamForm : Form
     {
         private readonly ExamService _examService = new ExamService();
+        private readonly RecommendationService _recommendationService = new RecommendationService();
         private readonly int _studentId;
         private readonly int _attemptId;
         private readonly Timer _examTimer;
@@ -631,6 +632,11 @@ namespace QuizGenAI.Forms.Student
             {
                 var result = _examService.SubmitAttempt(_studentId, _session.AttemptId, autoSubmitted);
                 var summary = _examService.GetAttemptSummary(_studentId, result.AttemptId);
+                var recommendations = _recommendationService.GetRecommendationsForAttempt(_studentId, result.AttemptId);
+                summary.Recommendations = recommendations.Recommendations;
+                summary.UsedFallbackRecommendations = recommendations.UsedFallback;
+                summary.RecommendationSourceLabel = recommendations.SourceLabel;
+                summary.WeakAreaSummary = recommendations.WeakAreaSummary;
 
                 using (var resultsForm = new StudentResultsForm(summary))
                 {

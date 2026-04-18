@@ -123,6 +123,22 @@ namespace QuizGenAI.Forms.Student
             return grid;
         }
 
+        private Control BuildBodyPanel()
+        {
+            var grid = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
+
+            grid.Controls.Add(BuildDetailsPanel(), 0, 0);
+            grid.Controls.Add(BuildRecommendationPanel(), 1, 0);
+            return grid;
+        }
+
         private Control BuildDetailsPanel()
         {
             var panel = CreateSurfacePanel();
@@ -134,17 +150,109 @@ namespace QuizGenAI.Forms.Student
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(51, 65, 85),
                 Text = string.Format(
-                    "Student: {0}\r\nQuestions answered: {1} of {2}\r\nCorrect: {3}\r\nWrong: {4}\r\nUnanswered: {5}\r\nSubmission time: {6}",
+                    "Student: {0}\r\nQuestions answered: {1} of {2}\r\nCorrect: {3}\r\nWrong: {4}\r\nUnanswered: {5}\r\nSubmission time: {6}\r\nRecommendation source: {7}",
                     _summary.StudentName,
                     _summary.AnsweredQuestions,
                     _summary.TotalQuestions,
                     _summary.CorrectAnswers,
                     _summary.WrongAnswers,
                     _summary.UnansweredQuestions,
-                    _summary.SubmittedAtDisplay)
+                    _summary.SubmittedAtDisplay,
+                    string.IsNullOrWhiteSpace(_summary.RecommendationSourceLabel) ? "Not available" : _summary.RecommendationSourceLabel)
             };
 
             panel.Controls.Add(lblBody);
+            return panel;
+        }
+
+        private Control BuildRecommendationPanel()
+        {
+            var panel = CreateSurfacePanel();
+            panel.Padding = new Padding(22, 20, 22, 20);
+            panel.Margin = new Padding(18, 0, 0, 0);
+
+            var content = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+
+            if (!string.IsNullOrWhiteSpace(_summary.WeakAreaSummary))
+            {
+                content.Controls.Add(new Label
+                {
+                    Width = 360,
+                    Height = 56,
+                    Font = new Font("Segoe UI", 9.5F),
+                    ForeColor = Color.FromArgb(71, 85, 105),
+                    Text = _summary.WeakAreaSummary
+                });
+            }
+
+            if (_summary.Recommendations.Count == 0)
+            {
+                content.Controls.Add(new Label
+                {
+                    Width = 360,
+                    Height = 52,
+                    Font = new Font("Segoe UI", 10F),
+                    ForeColor = Color.FromArgb(71, 85, 105),
+                    Text = "No study recommendations are available for this attempt yet."
+                });
+            }
+            else
+            {
+                foreach (var item in _summary.Recommendations)
+                {
+                    content.Controls.Add(CreateRecommendationCard(item));
+                }
+            }
+
+            panel.Controls.Add(content);
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
+                Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = "Study Recommendations"
+            });
+
+            return panel;
+        }
+
+        private static Control CreateRecommendationCard(StudentRecommendationDto item)
+        {
+            var panel = new Panel
+            {
+                Width = 360,
+                Height = 96,
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 12),
+                Padding = new Padding(14, 12, 14, 12)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = item.Description
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = item.Title
+            });
+
             return panel;
         }
 
