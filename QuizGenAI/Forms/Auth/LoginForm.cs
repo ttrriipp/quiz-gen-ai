@@ -63,12 +63,14 @@ namespace QuizGenAI.Forms.Auth
                 case UserRole.Teacher:
                     return new TeacherDashboardForm
                     {
+                        DisplayName = displayName,
                         Text = string.Format("Teacher Dashboard - {0}", displayName)
                     };
 
                 case UserRole.Student:
                     return new StudentQuizzesForm
                     {
+                        DisplayName = displayName,
                         Text = string.Format("Student Quizzes - {0}", displayName)
                     };
 
