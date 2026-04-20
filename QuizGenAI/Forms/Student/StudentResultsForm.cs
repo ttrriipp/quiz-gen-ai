@@ -1,8 +1,10 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Helpers;
+using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Student
 {
@@ -18,6 +20,7 @@ namespace QuizGenAI.Forms.Student
         private static readonly Color RecommendationBg = Color.FromArgb(250, 251, 247);
 
         private readonly StudentAttemptSummaryDto _summary;
+        private readonly ResultPdfExportService _pdfExportService = new ResultPdfExportService();
 
         public StudentResultsForm(StudentAttemptSummaryDto summary)
         {
@@ -294,6 +297,9 @@ namespace QuizGenAI.Forms.Student
                 Close();
             };
 
+            var btnDownloadPdf = CreateActionButton("Download PDF", HeroAccent, Color.FromArgb(22, 44, 35));
+            btnDownloadPdf.Click += DownloadPdf_Click;
+
             var btnBack = CreateActionButton("Back To Quizzes", Color.White, TextPrimary);
             btnBack.FlatAppearance.BorderColor = SurfaceBorder;
             btnBack.FlatAppearance.BorderSize = 1;
@@ -304,9 +310,39 @@ namespace QuizGenAI.Forms.Student
             };
 
             flow.Controls.Add(btnAllResults);
+            flow.Controls.Add(btnDownloadPdf);
             flow.Controls.Add(btnBack);
             panel.Controls.Add(flow);
             return panel;
+        }
+
+        private void DownloadPdf_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "PDF files (*.pdf)|*.pdf";
+                dialog.DefaultExt = "pdf";
+                dialog.AddExtension = true;
+                dialog.FileName = ResultPdfExportService.BuildDefaultFileName(_summary);
+
+                if (dialog.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(dialog.FileName))
+                {
+                    return;
+                }
+
+                try
+                {
+                    _pdfExportService.Export(_summary, dialog.FileName);
+                    NotificationHelper.ShowSuccess(
+                        this,
+                        "PDF Exported",
+                        string.Format("Saved result summary to {0}.", Path.GetFileName(dialog.FileName)));
+                }
+                catch (Exception ex)
+                {
+                    NotificationHelper.ShowError(this, "Export Failed", ex.Message);
+                }
+            }
         }
 
         private static Control CreateRecommendationCard(StudentRecommendationDto item)
