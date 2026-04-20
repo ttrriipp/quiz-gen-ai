@@ -92,7 +92,7 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = WorkspaceBg,
-                Padding = new Padding(20)
+                Padding = new Padding(20, 14, 20, 18)
             };
             _reportsScrollHost.Resize += ReportsScrollHost_Resize;
 
@@ -102,17 +102,15 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
                 ColumnCount = 1,
-                RowCount = 3,
+                RowCount = 2,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0)
             };
-            _reportsRootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 108F));
-            _reportsRootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 204F));
-            _reportsRootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 1240F));
+            _reportsRootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 186F));
+            _reportsRootLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            _reportsRootLayout.Controls.Add(BuildHeaderPanel(), 0, 0);
-            _reportsRootLayout.Controls.Add(BuildMetricRow(), 0, 1);
-            _reportsRootLayout.Controls.Add(BuildContentRow(), 0, 2);
+            _reportsRootLayout.Controls.Add(BuildMetricRow(), 0, 0);
+            _reportsRootLayout.Controls.Add(BuildContentRow(), 0, 1);
 
             _reportsScrollHost.Controls.Add(_reportsRootLayout);
             Controls.Add(_reportsScrollHost);
@@ -136,46 +134,6 @@ namespace QuizGenAI.Forms.Teacher
             _reportsRootLayout.Width = Math.Max(720, inner);
         }
 
-        private Control BuildHeaderPanel()
-        {
-            var panel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
-                Padding = new Padding(22, 14, 22, 18)
-            };
-
-            var body = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent
-            };
-
-            body.Controls.Add(new Label
-            {
-                Name = "lblReportsMeta",
-                Dock = DockStyle.Top,
-                Height = 24,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = TextMuted,
-                BackColor = Color.Transparent,
-                Text = "Loading teacher report summary..."
-            });
-
-            body.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 40,
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
-                ForeColor = TextPrimary,
-                BackColor = Color.Transparent,
-                Text = "Performance Reports"
-            });
-
-            panel.Controls.Add(body);
-            return panel;
-        }
-
         private Control BuildMetricRow()
         {
             var row = new TableLayoutPanel
@@ -183,7 +141,7 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
                 RowCount = 1,
-                Margin = new Padding(0, 18, 0, 18),
+                Margin = new Padding(0, 0, 0, 16),
                 BackColor = Color.Transparent
             };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
@@ -200,7 +158,9 @@ namespace QuizGenAI.Forms.Teacher
         {
             var grid = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 2,
                 BackColor = Color.Transparent
@@ -208,7 +168,7 @@ namespace QuizGenAI.Forms.Teacher
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
             grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 320F));
-            grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 920F));
+            grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             grid.Controls.Add(BuildAverageScoreTrendPanel(), 0, 0);
             grid.Controls.Add(BuildSubjectMasteryChartPanel(), 1, 0);
@@ -339,16 +299,20 @@ namespace QuizGenAI.Forms.Teacher
         private Control BuildHardestQuestionsPanel()
         {
             var panel = CreateSurfacePanel();
+            panel.Dock = DockStyle.Top;
+            panel.AutoSize = true;
+            panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             panel.Padding = new Padding(18, 16, 18, 16);
             panel.Margin = new Padding(0, 18, 0, 0);
 
             panel.Controls.Add(new FlowLayoutPanel
             {
                 Name = "flowHardestQuestions",
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(0, 8, 0, 0),
                 BackColor = ChartPlotBg
             });
@@ -369,16 +333,20 @@ namespace QuizGenAI.Forms.Teacher
         private Control BuildRecentSubmissionsPanel()
         {
             var panel = CreateSurfacePanel();
+            panel.Dock = DockStyle.Top;
+            panel.AutoSize = true;
+            panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             panel.Padding = new Padding(18, 16, 18, 16);
             panel.Margin = new Padding(18, 18, 0, 0);
 
             panel.Controls.Add(new FlowLayoutPanel
             {
                 Name = "flowRecentSubmissions",
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(0, 8, 0, 0),
                 BackColor = ChartPlotBg
             });
