@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
@@ -13,11 +15,17 @@ namespace QuizGenAI.Forms.Teacher
 {
     public partial class TeacherQuizzesForm : Form
     {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
+        private const int EmSetCueBanner = 0x1501;
+
+        private static readonly Color CardBg = Color.FromArgb(16, 58, 44);
+        private static readonly Color SubtleBorder = Color.FromArgb(72, 255, 255, 255);
+
         private readonly QuizService _quizService;
         private TextBox _txtSearch;
         private ComboBox _cmbStatus;
         private FlowLayoutPanel _cardsHost;
-        private Label _lblSummary;
 
         public TeacherQuizzesForm()
         {
@@ -41,7 +49,6 @@ namespace QuizGenAI.Forms.Teacher
             SuspendLayout();
             Controls.Clear();
 
-            BackColor = Color.FromArgb(244, 246, 248);
             Font = new Font("Segoe UI", 10F);
             ClientSize = new Size(1180, 760);
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -49,50 +56,29 @@ namespace QuizGenAI.Forms.Teacher
             StartPosition = FormStartPosition.CenterParent;
             Text = "Teacher Quizzes";
 
-            var topPanel = new Panel
+            // Compact toolbar: search | filter | New Manual | New AI | Close
+            var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 170,
-                BackColor = Color.White,
-                Padding = new Padding(24, 18, 24, 16)
-            };
-
-            var lblTitle = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 44,
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(17, 24, 39),
-                Text = "Quiz Management"
-            };
-
-            _lblSummary = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 32,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(75, 85, 99),
-                Text = "Search, review, and maintain draft quizzes."
-            };
-
-            var filtersPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 52,
-                Padding = new Padding(0, 8, 0, 0)
+                Height = 54,
+                BackColor = Color.Transparent
             };
 
             _txtSearch = new TextBox
             {
-                Width = 320,
-                Location = new Point(0, 8)
+                Width = 260,
+                Location = new Point(0, 12)
             };
             _txtSearch.TextChanged += delegate { LoadQuizCards(); };
+            _txtSearch.HandleCreated += delegate
+            {
+                SendMessage(_txtSearch.Handle, EmSetCueBanner, IntPtr.Zero, "Search by title, topic, subject...");
+            };
 
             _cmbStatus = new ComboBox
             {
-                Width = 170,
-                Location = new Point(336, 8),
+                Width = 148,
+                Location = new Point(268, 14),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             _cmbStatus.Items.Add(new StatusFilterOption("All statuses", null));
@@ -103,63 +89,43 @@ namespace QuizGenAI.Forms.Teacher
             _cmbStatus.SelectedIndexChanged += delegate { LoadQuizCards(); };
 
             var btnNewQuiz = CreateActionButton("New Manual Quiz");
-            btnNewQuiz.Location = new Point(530, 4);
+            btnNewQuiz.Width = 148;
+            btnNewQuiz.Height = 34;
+            btnNewQuiz.Location = new Point(428, 10);
             btnNewQuiz.Click += delegate { OpenEditor(null); };
 
             var btnNewAiQuiz = CreateActionButton("New AI Quiz");
-            btnNewAiQuiz.Width = 116;
-            btnNewAiQuiz.Location = new Point(688, 4);
+            btnNewAiQuiz.Width = 136;
+            btnNewAiQuiz.Height = 34;
+            btnNewAiQuiz.Location = new Point(584, 10);
             btnNewAiQuiz.Click += async delegate { await OpenAiGeneratorAsync(); };
 
-            var btnClose = new Button
-            {
-                Text = "Close",
-                Width = 96,
-                Height = 34,
-                Location = new Point(814, 4),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnClose.Click += delegate { Close(); };
-
-            filtersPanel.Controls.Add(_txtSearch);
-            filtersPanel.Controls.Add(_cmbStatus);
-            filtersPanel.Controls.Add(btnNewQuiz);
-            filtersPanel.Controls.Add(btnNewAiQuiz);
-            filtersPanel.Controls.Add(btnClose);
-
-            topPanel.Controls.Add(filtersPanel);
-            topPanel.Controls.Add(_lblSummary);
-            topPanel.Controls.Add(lblTitle);
+            toolbar.Controls.Add(_txtSearch);
+            toolbar.Controls.Add(_cmbStatus);
+            toolbar.Controls.Add(btnNewQuiz);
+            toolbar.Controls.Add(btnNewAiQuiz);
 
             _cardsHost = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 WrapContents = true,
-                Padding = new Padding(24),
-                BackColor = Color.FromArgb(244, 246, 248)
+                Padding = new Padding(0, 14, 0, 0),
+                BackColor = Color.Transparent
             };
 
             Controls.Add(_cardsHost);
-            Controls.Add(topPanel);
+            Controls.Add(toolbar);
             ResumeLayout();
         }
 
         private void LoadQuizCards()
         {
-            var selectedStatus = (_cmbStatus.SelectedItem as StatusFilterOption);
+            var selectedStatus = _cmbStatus.SelectedItem as StatusFilterOption;
             var quizzes = _quizService.GetQuizSummaries(_txtSearch.Text, selectedStatus != null ? selectedStatus.Value : null);
 
             _cardsHost.SuspendLayout();
             _cardsHost.Controls.Clear();
-
-            _lblSummary.Text = string.Format(
-                "{0} quiz{1} found{2}. Signed in as {3}.",
-                quizzes.Count,
-                quizzes.Count == 1 ? string.Empty : "zes",
-                quizzes.Count == 1 ? string.Empty : "",
-                string.IsNullOrWhiteSpace(DisplayName) ? "teacher" : DisplayName);
 
             if (quizzes.Count == 0)
             {
@@ -178,108 +144,114 @@ namespace QuizGenAI.Forms.Teacher
 
         private Panel CreateQuizCard(QuizListItemDto quiz)
         {
+            const int cardW = 290;
+            const int px = 14;
+            const int contentW = cardW - px * 2;
+
             var card = new Panel
             {
-                Width = 560,
-                Height = 272,
-                Margin = new Padding(0, 0, 18, 18),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(18, 16, 18, 16)
+                Width = cardW,
+                Height = 242,
+                Margin = new Padding(0, 0, 12, 12),
+                BackColor = CardBg,
+                BorderStyle = BorderStyle.None
             };
+            card.Paint += CardPanel_PaintRoundedBorder;
 
-            var badge = new Label
-            {
-                AutoSize = false,
-                Width = 94,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold),
-                Text = quiz.Status.ToString(),
-                BackColor = GetStatusBackColor(quiz.Status),
-                ForeColor = GetStatusForeColor(quiz.Status),
-                Location = new Point(card.Width - 118, 16)
-            };
-            badge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            // Subject badge – pill on the left
+            var subjectBadge = CreateBadgePill(quiz.SubjectName, Color.FromArgb(22, 74, 56), new Point(px, 12));
 
-            var lblSubject = new Label
-            {
-                AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(14, 116, 144),
-                Text = quiz.SubjectName
-            };
+            // Status badge – pill on the right, dark themed colors
+            var statusBadge = CreateBadgePill(quiz.Status.ToString(), GetStatusBgColor(quiz.Status), Point.Empty);
+            statusBadge.Location = new Point(cardW - statusBadge.Width - px, 12);
 
             var lblTitle = new Label
             {
                 AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 62,
-                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(17, 24, 39),
-                Text = quiz.Title
+                Width = contentW,
+                Height = 44,
+                Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(235, 243, 239),
+                Text = quiz.Title,
+                Location = new Point(px, 44)
             };
 
             var lblTopic = new Label
             {
                 AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 40,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(75, 85, 99),
-                Text = quiz.Topic
-            };
-
-            var lblMeta = new Label
-            {
-                AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 34,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = Color.FromArgb(55, 65, 81),
-                Text = string.Format(
-                    "{0} question{1}  |  {2}  |  {3} mins",
-                    quiz.QuestionCount,
-                    quiz.QuestionCount == 1 ? string.Empty : "s",
-                    quiz.Difficulty,
-                    quiz.DurationMinutes)
+                Width = contentW,
+                Height = 20,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(184, 201, 193),
+                Text = quiz.Topic,
+                Location = new Point(px, 92)
             };
 
             var lblUpdated = new Label
             {
                 AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = Color.FromArgb(107, 114, 128),
-                Text = string.Format("Updated {0:g}", quiz.UpdatedAt.ToLocalTime())
+                Width = contentW,
+                Height = 16,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(140, 165, 155),
+                Text = string.Format("Updated {0:g}", quiz.UpdatedAt.ToLocalTime()),
+                Location = new Point(px, 114)
             };
 
-            var buttonPanel = new Panel
+            // Meta: "X questions  ·  Difficulty · Xm"
+            var lblMeta = new Label
             {
-                Dock = DockStyle.Bottom,
-                Height = 42
+                AutoSize = false,
+                Width = contentW,
+                Height = 20,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(184, 201, 193),
+                Text = string.Format("{0} question{1}  ·  {2} · {3}m",
+                    quiz.QuestionCount,
+                    quiz.QuestionCount == 1 ? string.Empty : "s",
+                    quiz.Difficulty,
+                    quiz.DurationMinutes),
+                Location = new Point(px, 136)
             };
 
-            var btnEdit = CreateActionButton("Edit");
-            btnEdit.Width = 126;
-            btnEdit.Location = new Point(0, 4);
+            // "Review & edit" – full-width primary button
+            var btnEdit = new Button
+            {
+                Text = "Review && edit",
+                Width = contentW,
+                Height = 32,
+                Location = new Point(px, 164),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(26, 90, 68),
+                ForeColor = Color.FromArgb(235, 243, 239),
+                Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnEdit.FlatAppearance.BorderColor = Color.FromArgb(44, 105, 82);
+            btnEdit.FlatAppearance.BorderSize = 1;
             btnEdit.Click += delegate { OpenEditor(quiz.Id); };
 
-            var btnStatus = CreateActionButton(GetPrimaryStatusActionLabel(quiz));
-            btnStatus.Width = 146;
-            btnStatus.Location = new Point(136, 4);
+            // Secondary action buttons
+            var btnStatus = new Button
+            {
+                Text = GetPrimaryStatusActionLabel(quiz),
+                Width = 92,
+                Height = 26,
+                Location = new Point(px, 202),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand
+            };
             btnStatus.Click += delegate { HandlePrimaryStatusAction(quiz); };
 
             var btnArchive = new Button
             {
                 Text = "Archive",
-                Width = 126,
-                Height = 34,
-                Location = new Point(290, 4),
+                Width = 70,
+                Height = 26,
+                Location = new Point(px + 98, 202),
                 FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
             };
             btnArchive.Click += delegate { ArchiveQuiz(quiz); };
@@ -288,52 +260,79 @@ namespace QuizGenAI.Forms.Teacher
             var btnDelete = new Button
             {
                 Text = "Delete",
-                Width = 126,
-                Height = 34,
-                Location = new Point(426, 4),
+                Width = 70,
+                Height = 26,
+                Location = new Point(px + 174, 202),
                 FlatStyle = FlatStyle.Flat,
-                ForeColor = Color.FromArgb(185, 28, 28),
+                ForeColor = Color.FromArgb(240, 100, 90),
+                Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
             };
             btnDelete.Click += delegate { DeleteQuiz(quiz); };
 
-            buttonPanel.Controls.Add(btnEdit);
-            buttonPanel.Controls.Add(btnStatus);
-            buttonPanel.Controls.Add(btnArchive);
-            buttonPanel.Controls.Add(btnDelete);
-
-            card.Controls.Add(buttonPanel);
-            card.Controls.Add(lblUpdated);
+            card.Controls.Add(btnDelete);
+            card.Controls.Add(btnArchive);
+            card.Controls.Add(btnStatus);
+            card.Controls.Add(btnEdit);
             card.Controls.Add(lblMeta);
+            card.Controls.Add(lblUpdated);
             card.Controls.Add(lblTopic);
             card.Controls.Add(lblTitle);
-            card.Controls.Add(lblSubject);
-            card.Controls.Add(badge);
+            card.Controls.Add(statusBadge);
+            card.Controls.Add(subjectBadge);
 
             return card;
+        }
+
+        private static Panel CreateBadgePill(string text, Color bgColor, Point location)
+        {
+            const int badgeH = 24;
+            var font = new Font("Segoe UI Semibold", 8F, FontStyle.Bold);
+            var textW = TextRenderer.MeasureText(text, font).Width;
+            var w = Math.Max(56, Math.Min(120, textW + 18));
+
+            var pill = new Panel
+            {
+                Location = location,
+                Size = new Size(w, badgeH),
+                BackColor = bgColor
+            };
+            pill.Paint += BadgePill_PaintBorder;
+            pill.Controls.Add(new Label
+            {
+                Bounds = new Rectangle(0, 0, w, badgeH),
+                Font = font,
+                ForeColor = Color.FromArgb(235, 243, 239),
+                BackColor = Color.Transparent,
+                Text = text,
+                TextAlign = ContentAlignment.MiddleCenter,
+                AutoSize = false
+            });
+
+            return pill;
         }
 
         private Control CreateEmptyStatePanel()
         {
             var panel = new Panel
             {
-                Width = 520,
-                Height = 220,
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(24)
+                Width = 420,
+                Height = 120,
+                BackColor = CardBg,
+                BorderStyle = BorderStyle.None,
+                Padding = new Padding(20)
             };
+            panel.Paint += CardPanel_PaintRoundedBorder;
 
-            var label = new Label
+            panel.Controls.Add(new Label
             {
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", 11F),
-                ForeColor = Color.FromArgb(75, 85, 99),
-                Text = "No quizzes match the current filters.\r\nCreate a manual quiz to start building the teacher workflow."
-            };
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(184, 201, 193),
+                Text = "No quizzes match the current filters.\r\nCreate a new quiz to get started."
+            });
 
-            panel.Controls.Add(label);
             return panel;
         }
 
@@ -483,29 +482,63 @@ namespace QuizGenAI.Forms.Teacher
             return quiz.Status == QuizStatus.Published ? "Move To Draft" : "Publish";
         }
 
-        private static Color GetStatusBackColor(QuizStatus status)
+        private static Color GetStatusBgColor(QuizStatus status)
         {
             switch (status)
             {
-                case QuizStatus.Published:
-                    return Color.FromArgb(220, 252, 231);
-                case QuizStatus.Archived:
-                    return Color.FromArgb(229, 231, 235);
-                default:
-                    return Color.FromArgb(254, 249, 195);
+                case QuizStatus.Published: return Color.FromArgb(24, 105, 72);
+                case QuizStatus.Archived: return Color.FromArgb(60, 70, 80);
+                default: return Color.FromArgb(130, 92, 18);
             }
         }
 
-        private static Color GetStatusForeColor(QuizStatus status)
+        private static void CardPanel_PaintRoundedBorder(object sender, PaintEventArgs e)
         {
-            switch (status)
+            var panel = (Panel)sender;
+            if (panel.Width <= 1 || panel.Height <= 1)
             {
-                case QuizStatus.Published:
-                    return Color.FromArgb(22, 101, 52);
-                case QuizStatus.Archived:
-                    return Color.FromArgb(55, 65, 81);
-                default:
-                    return Color.FromArgb(161, 98, 7);
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int radius = 14;
+            using (var path = new GraphicsPath())
+            {
+                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var pen = new Pen(SubtleBorder, 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+        }
+
+        private static void BadgePill_PaintBorder(object sender, PaintEventArgs e)
+        {
+            var panel = (Panel)sender;
+            if (panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int r = 10;
+            using (var path = new GraphicsPath())
+            {
+                path.AddArc(rect.X, rect.Y, r, r, 180, 90);
+                path.AddArc(rect.Right - r, rect.Y, r, r, 270, 90);
+                path.AddArc(rect.Right - r, rect.Bottom - r, r, r, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - r, r, r, 90, 90);
+                path.CloseFigure();
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var pen = new Pen(SubtleBorder, 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
             }
         }
 
