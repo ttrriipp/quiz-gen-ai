@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Forms.DataVisualization.Charting;
 using Guna.UI2.WinForms;
 using QuizGenAI.DTOs;
+using QuizGenAI.Enums;
 using QuizGenAI.Helpers;
 using QuizGenAI.Services;
+using ScottPlot.WinForms;
+using ScottColor = ScottPlot.Color;
 
 namespace QuizGenAI.Forms.Teacher
 {
@@ -15,6 +20,7 @@ namespace QuizGenAI.Forms.Teacher
     {
         private readonly Dictionary<string, Guna2Button> _navButtons = new Dictionary<string, Guna2Button>();
         private readonly ReportService _reportService = new ReportService();
+        private readonly QuizService _quizService = new QuizService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _topBar;
@@ -23,6 +29,15 @@ namespace QuizGenAI.Forms.Teacher
         private Control _hostedContentView;
 
         private static readonly Color MainWorkspaceGreen = Color.FromArgb(11, 48, 34);
+        private static readonly Color DashboardCard = Color.FromArgb(18, 66, 50);
+        private static readonly Color DashboardCardStrong = Color.FromArgb(28, 109, 77);
+        private static readonly Color DashboardPlot = Color.FromArgb(12, 52, 39);
+        private static readonly Color DashboardBorder = Color.FromArgb(72, 255, 255, 255);
+        private static readonly Color DashboardText = Color.FromArgb(244, 248, 244);
+        private static readonly Color DashboardMuted = Color.FromArgb(188, 208, 196);
+        private static readonly Color DashboardAccent = Color.FromArgb(205, 224, 155);
+        private static readonly Color DashboardMustard = Color.FromArgb(224, 190, 93);
+        private static readonly Color DashboardDanger = Color.FromArgb(198, 59, 52);
         private string _displayName = "Teacher";
         public int CurrentUserId { get; set; }
 
@@ -252,30 +267,35 @@ namespace QuizGenAI.Forms.Teacher
             switch (sectionKey)
             {
                 case "dashboard":
+                    _topBar.Visible = false;
                     _lblPageTitle.Text = "Dashboard";
                     _lblPageDescription.Text = "Teacher/admin overview with quick actions and project metrics.";
                     RenderDashboardView();
                     break;
 
                 case "quizzes":
+                    _topBar.Visible = true;
                     _lblPageTitle.Text = "Quizzes";
                     _lblPageDescription.Text = "Manage draft, published, and archived quizzes without leaving the teacher shell.";
                     RenderHostedForm(CreateHostedQuizManager());
                     break;
 
                 case "reports":
+                    _topBar.Visible = true;
                     _lblPageTitle.Text = "Reports";
                     _lblPageDescription.Text = "Review teacher analytics and reporting inside the same workspace.";
                     RenderHostedControl(CreateHostedReportsView());
                     break;
 
                 case "logs":
+                    _topBar.Visible = true;
                     _lblPageTitle.Text = "Logs";
                     _lblPageDescription.Text = "Structured Serilog output from the app runtime.";
                     RenderLogsView();
                     break;
 
                 default:
+                    _topBar.Visible = true;
                     _lblPageTitle.Text = "Logs";
                     _lblPageDescription.Text = "Structured Serilog output from the app runtime.";
                     RenderLogsView();
@@ -288,67 +308,677 @@ namespace QuizGenAI.Forms.Teacher
             ClearHostedContentView();
             _contentHost.Controls.Clear();
             var dashboard = _reportService.GetTeacherDashboard();
+            var reports = _reportService.GetTeacherReports();
+            var quizzes = _quizService
+                .GetQuizSummaries(null, null)
+                .OrderByDescending(x => x.UpdatedAt)
+                .Take(3)
+                .ToList();
 
             var root = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 1,
-                RowCount = 3,
+                RowCount = 5,
                 BackColor = Color.Transparent
             };
 
             root.RowStyles.Clear();
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 168F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            for (var i = 0; i < 5; i++)
+            {
+                root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
 
-            var hero = CreateHeroPanel(
-                "Welcome back",
-                "Use this workspace to manage quizzes, review publishing status, and access reports from one place.",
-                "Generate Quiz");
+            root.Controls.Add(CreateDashboardWelcomeHeader(), 0, 0);
+            root.Controls.Add(CreateDashboardStatsRow(dashboard), 0, 1);
+            root.Controls.Add(CreateDashboardAnalyticsRow(reports), 0, 2);
+            root.Controls.Add(CreateDashboardPerformanceRow(dashboard), 0, 3);
+            root.Controls.Add(CreateDashboardQuizzesSection(quizzes), 0, 4);
+            _contentHost.Controls.Add(root);
+        }
 
-            var stats = new TableLayoutPanel
+        private Control CreateDashboardWelcomeHeader()
+        {
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = new Padding(0, 2, 0, 12),
+                BackColor = Color.Transparent
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 188F));
+
+            var textHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Height = 88,
+                BackColor = Color.Transparent
+            };
+
+            var lblSection = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 22,
+                Font = new Font("Segoe UI Semibold", 8.8F, FontStyle.Bold),
+                ForeColor = DashboardMuted,
+                Text = "TEACHER DASHBOARD"
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 46,
+                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = string.Format("Welcome back, {0}", DisplayName)
+            };
+
+            var lblSubtitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = DashboardMuted,
+                Text = "Here is what is happening across your quizzes today."
+            };
+
+            textHost.Controls.Add(lblSection);
+            textHost.Controls.Add(lblTitle);
+            textHost.Controls.Add(lblSubtitle);
+
+            var actionButton = new Guna2Button
+            {
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                Width = 138,
+                Height = 42,
+                BorderRadius = 10,
+                FillColor = Color.FromArgb(18, 95, 65),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = "Generate Quiz",
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 18, 0, 0)
+            };
+            actionButton.Click += delegate
+            {
+                ShowSection("quizzes");
+            };
+
+            row.Controls.Add(textHost, 0, 0);
+            row.Controls.Add(actionButton, 1, 0);
+            return row;
+        }
+
+        private Control CreateDashboardStatsRow(TeacherDashboardDto dashboard)
+        {
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 4,
+                RowCount = 1,
+                Margin = new Padding(0, 0, 0, 16),
+                BackColor = Color.Transparent
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+
+            row.Controls.Add(CreateDashboardStatCard("Total Quizzes", dashboard.TotalQuizzes.ToString(), "+" + dashboard.PublishedQuizzes + " published", false), 0, 0);
+            row.Controls.Add(CreateDashboardStatCard("Published", dashboard.PublishedQuizzes.ToString(), dashboard.DraftQuizzes + " drafts waiting", false), 1, 0);
+            row.Controls.Add(CreateDashboardStatCard("Active Students", dashboard.TotalStudents.ToString(), "+" + dashboard.RecentSubmissions.Count + " recent results", false), 2, 0);
+            row.Controls.Add(CreateDashboardStatCard("Avg. Score", dashboard.AverageScore.ToString("0.#") + "%", dashboard.SubmittedAttempts + " submissions", true), 3, 0);
+            return row;
+        }
+
+        private Control CreateDashboardAnalyticsRow(TeacherReportsDto reports)
+        {
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = new Padding(0, 0, 0, 16),
+                BackColor = Color.Transparent
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38F));
+
+            row.Controls.Add(CreateTrendChartCard(reports), 0, 0);
+            row.Controls.Add(CreatePassFailCard(reports), 1, 0);
+            return row;
+        }
+
+        private Control CreateDashboardPerformanceRow(TeacherDashboardDto dashboard)
+        {
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = new Padding(0, 0, 0, 18),
+                BackColor = Color.Transparent
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38F));
+
+            row.Controls.Add(CreateSubjectPerformanceCard(dashboard), 0, 0);
+            row.Controls.Add(CreateRecentResultsCard(dashboard), 1, 0);
+            return row;
+        }
+
+        private Control CreateDashboardQuizzesSection(List<QuizListItemDto> quizzes)
+        {
+            var section = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 214,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0)
+            };
+
+            var header = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                ColumnCount = 1,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            header.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = "Your quizzes",
+                TextAlign = ContentAlignment.MiddleLeft
+            }, 0, 0);
+
+            var cards = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
                 RowCount = 1,
-                Margin = new Padding(0, 18, 0, 18)
+                Margin = new Padding(0, 10, 0, 0),
+                BackColor = Color.Transparent
             };
+            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
-            stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+            for (var i = 0; i < 3; i++)
+            {
+                var quiz = i < quizzes.Count ? quizzes[i] : null;
+                cards.Controls.Add(CreateQuizPreviewCard(quiz, i), i, 0);
+            }
 
-            stats.Controls.Add(CreateMetricCard("Total Students", dashboard.TotalStudents.ToString(), "Students with the student role in the local database."), 0, 0);
-            stats.Controls.Add(CreateMetricCard("Total Quizzes", dashboard.TotalQuizzes.ToString(), "All draft, published, and archived quizzes."), 1, 0);
-            stats.Controls.Add(CreateMetricCard("Average Score", dashboard.AverageScore.ToString("0.0") + "%", "Average across submitted attempts."), 2, 0);
+            section.Controls.Add(cards);
+            section.Controls.Add(header);
+            return section;
+        }
 
-            var bottom = new TableLayoutPanel
+        private Panel CreateDashboardStatCard(string title, string value, string note, bool highlighted)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Height = 92;
+            panel.Margin = new Padding(0, 0, 16, 0);
+            panel.Padding = new Padding(18, 14, 18, 14);
+            panel.BackColor = highlighted ? DashboardCardStrong : DashboardCard;
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = highlighted ? Color.FromArgb(232, 242, 232) : DashboardMuted,
+                Text = title.ToUpperInvariant()
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 44,
+                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = value
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.8F),
+                ForeColor = highlighted ? Color.FromArgb(228, 238, 228) : DashboardMuted,
+                Text = note
+            });
+
+            return panel;
+        }
+
+        private Panel CreateTrendChartCard(TeacherReportsDto reports)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Height = 228;
+            panel.Padding = new Padding(18, 14, 18, 16);
+            panel.Margin = new Padding(0, 0, 16, 0);
+
+            var chart = new FormsPlot
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1
+                BackColor = DashboardPlot
             };
 
-            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58F));
-            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42F));
+            ConfigureMiniPlot(chart.Plot);
+            var xs = Enumerable.Range(0, reports.ScoreTrendByMonth.Count).Select(i => (double)i).ToArray();
+            var ys = reports.ScoreTrendByMonth.Select(x => x.AverageScore ?? 0D).ToArray();
+            var labels = reports.ScoreTrendByMonth.Select(x => x.MonthLabel).ToArray();
+            if (xs.Length > 0)
+            {
+                var scatter = chart.Plot.Add.ScatterLine(xs, ys);
+                scatter.Color = ScottColor.FromColor(DashboardAccent);
+                scatter.LineWidth = 2.5F;
+                chart.Plot.Add.ScatterPoints(xs, ys).Color = ScottColor.FromColor(DashboardAccent);
+                chart.Plot.Axes.Bottom.SetTicks(xs, labels);
+                chart.Plot.Axes.Left.Label.Text = "%";
+                chart.Plot.Axes.Margins(0.06, 0.08, 0.1, 0.12);
+            }
 
-            bottom.Controls.Add(CreateInsightPanel(
-                "Status Overview",
-                string.Format("{0} submissions recorded so far.", dashboard.SubmittedAttempts),
-                new[]
+            panel.Controls.Add(chart);
+            panel.Controls.Add(CreateDashboardCardHeader("Class performance trend"));
+            return panel;
+        }
+
+        private Panel CreatePassFailCard(TeacherReportsDto reports)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Height = 228;
+            panel.Padding = new Padding(14, 14, 14, 14);
+
+            var chart = new Chart
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DashboardCard,
+                Palette = ChartColorPalette.None
+            };
+
+            var area = new ChartArea("donut")
+            {
+                BackColor = DashboardCard
+            };
+            area.AxisX.Enabled = AxisEnabled.False;
+            area.AxisY.Enabled = AxisEnabled.False;
+            chart.ChartAreas.Add(area);
+
+            var series = new Series("PassFail")
+            {
+                ChartType = SeriesChartType.Doughnut,
+                ChartArea = "donut",
+                IsValueShownAsLabel = false
+            };
+            series["DoughnutRadius"] = "72";
+            series.Points.AddXY("Pass", Math.Max(0, reports.PassCount));
+            series.Points.AddXY("Fail", Math.Max(0, reports.FailCount));
+            series.Points[0].Color = Color.FromArgb(24, 105, 72);
+            series.Points[1].Color = DashboardDanger;
+            chart.Series.Add(series);
+            chart.Legends.Clear();
+
+            var legend = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 30,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent
+            };
+            legend.Controls.Add(CreateLegendChip(Color.FromArgb(24, 105, 72), string.Format("Pass ({0})", reports.PassCount)));
+            legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", reports.FailCount)));
+
+            panel.Controls.Add(legend);
+            panel.Controls.Add(chart);
+            panel.Controls.Add(CreateDashboardCardHeader("Pass vs fail"));
+            return panel;
+        }
+
+        private Panel CreateSubjectPerformanceCard(TeacherDashboardDto dashboard)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Height = 228;
+            panel.Padding = new Padding(18, 14, 18, 16);
+            panel.Margin = new Padding(0, 0, 16, 0);
+
+            var chart = new FormsPlot
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DashboardPlot
+            };
+            ConfigureMiniPlot(chart.Plot);
+            var subjects = dashboard.SubjectPerformance.OrderByDescending(x => x.AverageScore).ToList();
+            var xs = Enumerable.Range(0, subjects.Count).Select(i => (double)i).ToArray();
+            var ys = subjects.Select(x => x.AverageScore).ToArray();
+            if (subjects.Count > 0)
+            {
+                var bars = chart.Plot.Add.Bars(xs, ys);
+                foreach (var bar in bars.Bars)
                 {
-                    string.Format("Draft quizzes: {0}", dashboard.DraftQuizzes),
-                    string.Format("Published quizzes: {0}", dashboard.PublishedQuizzes),
-                    string.Format("Archived quizzes: {0}", dashboard.ArchivedQuizzes)
-                }), 0, 0);
+                    bar.FillColor = ScottColor.FromColor(Color.FromArgb(24, 92, 67));
+                    bar.LineColor = ScottColor.FromColor(DashboardAccent);
+                    bar.LineWidth = 1;
+                }
 
-            bottom.Controls.Add(CreateRecentSubmissionsPanel(dashboard), 1, 0);
+                chart.Plot.Axes.Bottom.SetTicks(xs, subjects.Select(x => x.SubjectName).ToArray());
+                chart.Plot.Axes.Left.Label.Text = "%";
+                chart.Plot.Axes.Margins(0.08, 0.08, 0, 0.12);
+            }
 
-            root.Controls.Add(hero, 0, 0);
-            root.Controls.Add(stats, 0, 1);
-            root.Controls.Add(bottom, 0, 2);
-            _contentHost.Controls.Add(root);
+            panel.Controls.Add(chart);
+            panel.Controls.Add(CreateDashboardCardHeader("Average score by subject"));
+            return panel;
+        }
+
+        private Panel CreateRecentResultsCard(TeacherDashboardDto dashboard)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Height = 228;
+            panel.Padding = new Padding(16, 14, 16, 12);
+
+            var list = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = false,
+                BackColor = Color.Transparent
+            };
+
+            foreach (var item in dashboard.RecentSubmissions.Take(5))
+            {
+                list.Controls.Add(CreateRecentResultRow(item));
+            }
+
+            if (list.Controls.Count == 0)
+            {
+                list.Controls.Add(new Label
+                {
+                    AutoSize = false,
+                    Width = 280,
+                    Height = 28,
+                    Font = new Font("Segoe UI", 9.5F),
+                    ForeColor = DashboardMuted,
+                    Text = "No recent results yet."
+                });
+            }
+
+            panel.Controls.Add(list);
+            panel.Controls.Add(CreateDashboardCardHeader("Recent results"));
+            return panel;
+        }
+
+        private Control CreateRecentResultRow(RecentSubmissionDto item)
+        {
+            var row = new Panel
+            {
+                Width = 320,
+                Height = 36,
+                Margin = new Padding(0, 0, 0, 10),
+                BackColor = Color.Transparent
+            };
+
+            row.Controls.Add(CreateScorePill(item.ScorePercentage));
+            row.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = DashboardMuted,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = string.Format("{0}\n{1}", item.StudentName, item.QuizTitle)
+            });
+
+            return row;
+        }
+
+        private Control CreateScorePill(double score)
+        {
+            var pill = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 54,
+                BackColor = score >= 75 ? Color.FromArgb(24, 105, 72) : (score >= 50 ? DashboardMustard : DashboardDanger),
+                Margin = new Padding(10, 0, 0, 0)
+            };
+            pill.Paint += DashboardMiniPanel_Paint;
+            pill.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = score.ToString("0.#") + "%"
+            });
+            return pill;
+        }
+
+        private Control CreateQuizPreviewCard(QuizListItemDto quiz, int index)
+        {
+            var card = CreateDashboardCardPanel();
+            card.Height = 122;
+            card.Margin = new Padding(index == 2 ? 0 : 0, 0, index == 2 ? 0 : 16, 0);
+            card.Padding = new Padding(16, 12, 16, 12);
+
+            if (quiz == null)
+            {
+                card.Controls.Add(new Label
+                {
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 10F),
+                    ForeColor = DashboardMuted,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Text = "No quiz available"
+                });
+                return card;
+            }
+
+            var badges = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                BackColor = Color.Transparent
+            };
+            badges.Controls.Add(CreateBadge(quiz.Status.ToString(), DockStyle.Right, GetStatusColor(quiz.Status)));
+            badges.Controls.Add(CreateBadge(quiz.SubjectName, DockStyle.Left, Color.FromArgb(72, 132, 191, 88)));
+
+            card.Controls.Add(new Label
+            {
+                Dock = DockStyle.Bottom,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = DashboardMuted,
+                Text = string.Format("{0} questions                        {1}", quiz.QuestionCount, quiz.Difficulty)
+            });
+            card.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 18,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = DashboardMuted,
+                Text = quiz.Topic
+            });
+            card.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 44,
+                Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = quiz.Title
+            });
+            card.Controls.Add(badges);
+
+            return card;
+        }
+
+        private static Panel CreateBadge(string text, DockStyle dock, Color color)
+        {
+            var host = new Panel
+            {
+                Dock = dock,
+                Width = Math.Max(72, text.Length * 7 + 18),
+                BackColor = color,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            host.Paint += DashboardMiniPanel_Paint;
+            host.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 8F, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = text
+            });
+            return host;
+        }
+
+        private static Color GetStatusColor(QuizStatus status)
+        {
+            switch (status)
+            {
+                case QuizStatus.Published:
+                    return Color.FromArgb(24, 105, 72);
+                case QuizStatus.Draft:
+                    return Color.FromArgb(145, 108, 35);
+                default:
+                    return Color.FromArgb(92, 104, 119);
+            }
+        }
+
+        private static Panel CreateDashboardCardHeader(string title)
+        {
+            var header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                BackColor = Color.Transparent
+            };
+
+            header.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = title,
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+
+            return header;
+        }
+
+        private static Panel CreateDashboardCardPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DashboardCard,
+                Margin = new Padding(0)
+            };
+            panel.Paint += DashboardCardPanel_Paint;
+            return panel;
+        }
+
+        private static void ConfigureMiniPlot(ScottPlot.Plot plot)
+        {
+            plot.Clear();
+            plot.FigureBackground.Color = ScottColor.FromColor(DashboardCard);
+            plot.DataBackground.Color = ScottColor.FromColor(DashboardPlot);
+            plot.Axes.Color(ScottColor.FromColor(DashboardMuted));
+            plot.Axes.FrameColor(ScottColor.FromColor(DashboardBorder));
+            plot.Axes.DefaultGrid.MajorLineColor = ScottColor.FromColor(Color.FromArgb(42, 255, 255, 255));
+            plot.Axes.DefaultGrid.MinorLineColor = ScottColor.FromColor(Color.FromArgb(20, 255, 255, 255));
+            plot.HideLegend();
+        }
+
+        private static Control CreateLegendChip(Color color, string text)
+        {
+            var host = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                Margin = new Padding(0, 0, 14, 0),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent
+            };
+
+            host.Controls.Add(new Panel
+            {
+                Width = 10,
+                Height = 10,
+                BackColor = color,
+                Margin = new Padding(0, 9, 6, 0)
+            });
+
+            host.Controls.Add(new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = DashboardMuted,
+                Text = text,
+                Margin = new Padding(0, 5, 0, 0)
+            });
+
+            return host;
+        }
+
+        private static void DashboardCardPanel_Paint(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int radius = 14;
+            using (var path = new GraphicsPath())
+            {
+                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var pen = new Pen(DashboardBorder, 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+        }
+
+        private static void DashboardMiniPanel_Paint(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            using (var pen = new Pen(Color.FromArgb(34, 255, 255, 255), 1))
+            {
+                e.Graphics.DrawRectangle(pen, rect);
+            }
         }
 
         private void RenderPlaceholderView(string title, string description, string[] bulletPoints)
