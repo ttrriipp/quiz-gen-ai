@@ -95,21 +95,24 @@ namespace QuizGenAI.Helpers
 
         private static void ApplyToControl(Control control)
         {
-            if (control is Button button)
+            var button = control as Button;
+            if (button != null)
             {
                 StyleButton(button);
                 AttachElipse(button, 10);
                 return;
             }
 
-            if (control is Label label)
+            var label = control as Label;
+            if (label != null)
             {
                 label.BackColor = Color.Transparent;
                 label.ForeColor = label.Font.Bold ? PrimaryText : SecondaryText;
                 return;
             }
 
-            if (control is LinkLabel linkLabel)
+            var linkLabel = control as LinkLabel;
+            if (linkLabel != null)
             {
                 linkLabel.LinkColor = PrimaryText;
                 linkLabel.ActiveLinkColor = Accent;
@@ -118,7 +121,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (control is TextBox textBox)
+            var textBox = control as TextBox;
+            if (textBox != null)
             {
                 textBox.BackColor = InputBackground;
                 textBox.ForeColor = PrimaryText;
@@ -127,7 +131,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (control is ComboBox comboBox)
+            var comboBox = control as ComboBox;
+            if (comboBox != null)
             {
                 comboBox.BackColor = InputBackground;
                 comboBox.ForeColor = PrimaryText;
@@ -136,7 +141,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (control is NumericUpDown numeric)
+            var numeric = control as NumericUpDown;
+            if (numeric != null)
             {
                 numeric.BackColor = InputBackground;
                 numeric.ForeColor = PrimaryText;
@@ -144,7 +150,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (control is ListBox listBox)
+            var listBox = control as ListBox;
+            if (listBox != null)
             {
                 listBox.BackColor = InputBackground;
                 listBox.ForeColor = PrimaryText;
@@ -153,7 +160,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (control is Panel panel)
+            var panel = control as Panel;
+            if (panel != null)
             {
                 panel.BackColor = IsLight(panel.BackColor) ? SurfaceBackground : panel.BackColor;
                 panel.ForeColor = PrimaryText;
@@ -188,7 +196,8 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
-            if (!Elipses.TryGetValue(control, out var elipse))
+            Guna2Elipse elipse;
+            if (!Elipses.TryGetValue(control, out elipse))
             {
                 elipse = new Guna2Elipse();
                 Elipses.Add(control, elipse);

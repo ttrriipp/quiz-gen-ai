@@ -51,10 +51,17 @@ namespace QuizGenAI.Forms.Teacher
 
         private void InvalidateChartsAfterLayout()
         {
-            _averageScoreChart?.PerformLayout();
-            _subjectMasteryChart?.PerformLayout();
-            _averageScoreChart?.Invalidate();
-            _subjectMasteryChart?.Invalidate();
+            if (_averageScoreChart != null)
+            {
+                _averageScoreChart.PerformLayout();
+                _averageScoreChart.Invalidate();
+            }
+
+            if (_subjectMasteryChart != null)
+            {
+                _subjectMasteryChart.PerformLayout();
+                _subjectMasteryChart.Invalidate();
+            }
         }
 
         private void BuildLayout()
@@ -438,8 +445,15 @@ namespace QuizGenAI.Forms.Teacher
 
             UpdateAverageScoreChart(reports);
             UpdateSubjectMasteryChart(reports);
-            _averageScoreChart?.Invalidate();
-            _subjectMasteryChart?.Invalidate();
+            if (_averageScoreChart != null)
+            {
+                _averageScoreChart.Invalidate();
+            }
+
+            if (_subjectMasteryChart != null)
+            {
+                _subjectMasteryChart.Invalidate();
+            }
 
             var hardestFlow = Controls.Find("flowHardestQuestions", true).FirstOrDefault() as FlowLayoutPanel;
             if (hardestFlow != null)
@@ -683,7 +697,7 @@ namespace QuizGenAI.Forms.Teacher
             row.Controls.Add(metaLabel);
             row.Controls.Add(pill);
 
-            void layoutHardest(object sender, EventArgs e)
+            EventHandler layoutHardest = delegate
             {
                 var innerLeft = row.Padding.Left;
                 var innerTop = row.Padding.Top;
@@ -709,7 +723,7 @@ namespace QuizGenAI.Forms.Teacher
                 {
                     row.Height = nextH;
                 }
-            }
+            };
 
             row.SizeChanged += layoutHardest;
             row.HandleCreated += layoutHardest;
@@ -828,7 +842,7 @@ namespace QuizGenAI.Forms.Teacher
             bar.Controls.Add(h2);
             bar.Controls.Add(h3);
 
-            void arrange(object sender, EventArgs e)
+            EventHandler arrange = delegate
             {
                 var innerW = bar.ClientSize.Width - padX * 2;
                 var innerH = bar.ClientSize.Height - padY * 2;
@@ -843,7 +857,7 @@ namespace QuizGenAI.Forms.Teacher
                 h1.SetBounds(padX, padY, c0, innerH);
                 h2.SetBounds(padX + c0, padY, c1, innerH);
                 h3.SetBounds(padX + c0 + c1, padY, c2, innerH);
-            }
+            };
 
             bar.HandleCreated += arrange;
             bar.Resize += arrange;
@@ -907,7 +921,7 @@ namespace QuizGenAI.Forms.Teacher
             row.Controls.Add(lblQuiz);
             row.Controls.Add(pill);
 
-            void arrange(object sender, EventArgs e)
+            EventHandler arrange = delegate
             {
                 var innerW = row.ClientSize.Width - padX * 2;
                 var innerH = row.ClientSize.Height - padY * 2;
@@ -923,7 +937,7 @@ namespace QuizGenAI.Forms.Teacher
                 lblQuiz.SetBounds(padX + c0, padY, c1, innerH);
                 var pillY = padY + Math.Max(0, (innerH - pill.Height) / 2);
                 pill.SetBounds(padX + c0 + c1 + Math.Max(0, c2 - pill.Width), pillY, pill.Width, pill.Height);
-            }
+            };
 
             row.HandleCreated += arrange;
             row.Resize += arrange;
