@@ -39,7 +39,7 @@ namespace QuizGenAI.Services
                     return existingAttempt.Id;
                 }
 
-                var now = DateTime.UtcNow;
+                var now = DateTime.Now;
                 var nextAttemptNumber = context.StudentAttempts
                     .Where(x => x.StudentId == studentId && x.QuizId == quizId)
                     .Select(x => (int?)x.AttemptNumber)
@@ -103,7 +103,7 @@ namespace QuizGenAI.Services
                     SubjectName = attempt.Quiz.Subject != null ? attempt.Quiz.Subject.Name : "Unknown Subject",
                     Topic = attempt.Quiz.Topic,
                     DurationMinutes = attempt.Quiz.DurationMinutes,
-                    StartedAtUtc = attempt.StartedAt,
+                    StartedAtLocal = NormalizeStoredLocal(attempt.StartedAt),
                     Questions = attempt.Quiz.Questions
                         .OrderBy(x => x.OrderIndex)
                         .Select(x => new ExamQuestionDto
@@ -166,7 +166,7 @@ namespace QuizGenAI.Services
 
                 answer.SelectedChoiceId = selectedChoiceId;
                 answer.IsCorrect = selectedChoice != null && selectedChoice.IsCorrect;
-                answer.AnsweredAt = DateTime.UtcNow;
+                answer.AnsweredAt = DateTime.Now;
                 context.SaveChanges();
             }
         }
@@ -189,7 +189,8 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("This exam attempt has already been submitted.");
                 }
 
-                var now = DateTime.UtcNow;
+                var now = DateTime.Now;
+                var startedAtLocal = NormalizeStoredLocal(attempt.StartedAt);
                 var totalQuestions = attempt.Answers.Count;
                 var answeredQuestions = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue);
                 var correctAnswers = attempt.Answers.Count(x => x.SelectedChoiceId.HasValue && x.IsCorrect);
@@ -197,7 +198,7 @@ namespace QuizGenAI.Services
                 var score = totalQuestions == 0 ? 0D : (double)correctAnswers / totalQuestions * 100D;
 
                 attempt.SubmittedAt = now;
-                attempt.TimeSpentSeconds = Math.Max(0, (int)Math.Round((now - attempt.StartedAt).TotalSeconds));
+                attempt.TimeSpentSeconds = Math.Max(0, (int)Math.Round((now - startedAtLocal).TotalSeconds));
                 attempt.ScorePercentage = score;
                 context.SaveChanges();
 
@@ -263,7 +264,7 @@ namespace QuizGenAI.Services
                     CorrectAnswers = correctAnswers,
                     WrongAnswers = wrongAnswers,
                     UnansweredQuestions = Math.Max(0, totalQuestions - answeredQuestions),
-                    SubmittedAtDisplay = attempt.SubmittedAt.HasValue ? attempt.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending",
+                    SubmittedAtDisplay = attempt.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(attempt.SubmittedAt.Value) : "Pending",
                     TimeSpentDisplay = FormatDuration(attempt.TimeSpentSeconds),
                     WasAutoSubmitted = attempt.TimeSpentSeconds >= (attempt.Quiz != null ? attempt.Quiz.DurationMinutes * 60 : int.MaxValue)
                 };
@@ -313,6 +314,18 @@ namespace QuizGenAI.Services
             }
 
             return string.Format("{0:%m}m {0:%s}s", timeSpan);
+        }
+
+        private static DateTime NormalizeStoredLocal(DateTime value)
+        {
+            return value.Kind == DateTimeKind.Local
+                ? value
+                : DateTime.SpecifyKind(value, DateTimeKind.Local);
+        }
+
+        private static string FormatStoredLocalForDisplay(DateTime value)
+        {
+            return NormalizeStoredLocal(value).ToString("g");
         }
     }
 }

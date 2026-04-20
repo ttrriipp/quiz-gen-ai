@@ -395,7 +395,7 @@ namespace QuizGenAI.Forms.Student
                 _trackerButtons.Add(trackerButton);
             }
 
-            var elapsed = Math.Max(0, (int)Math.Floor((DateTime.UtcNow - _session.StartedAtUtc).TotalSeconds));
+            var elapsed = Math.Max(0, (int)Math.Floor((DateTime.Now - _session.StartedAtLocal).TotalSeconds));
             _remainingSeconds = Math.Max(0, (_session.DurationMinutes * 60) - elapsed);
 
             if (_remainingSeconds == 0)

@@ -70,7 +70,7 @@ namespace QuizGenAI.Services
                         StudentName = x.Student != null ? x.Student.Name : "Unknown Student",
                         QuizTitle = x.Quiz != null ? x.Quiz.Title : "Unknown Quiz",
                         ScorePercentage = Math.Round(x.ScorePercentage ?? 0, 1),
-                        SubmittedAtDisplay = x.SubmittedAt.HasValue ? x.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending"
+                        SubmittedAtDisplay = x.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(x.SubmittedAt.Value) : "Pending"
                     })
                     .ToList();
 
@@ -142,7 +142,7 @@ namespace QuizGenAI.Services
                             CorrectAnswers = correctAnswers,
                             WrongAnswers = wrongAnswers,
                             UnansweredQuestions = Math.Max(0, totalQuestions - answeredQuestions),
-                            SubmittedAtDisplay = x.SubmittedAt.HasValue ? x.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending",
+                            SubmittedAtDisplay = x.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(x.SubmittedAt.Value) : "Pending",
                             TimeSpentDisplay = FormatDuration(x.TimeSpentSeconds)
                         };
                     })
@@ -187,7 +187,7 @@ namespace QuizGenAI.Services
                         StudentName = x.Student != null ? x.Student.Name : "Unknown Student",
                         QuizTitle = x.Quiz != null ? x.Quiz.Title : "Unknown Quiz",
                         ScorePercentage = Math.Round(x.ScorePercentage ?? 0, 1),
-                        SubmittedAtDisplay = x.SubmittedAt.HasValue ? x.SubmittedAt.Value.ToLocalTime().ToString("g") : "Pending"
+                        SubmittedAtDisplay = x.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(x.SubmittedAt.Value) : "Pending"
                     })
                     .ToList();
 
@@ -222,6 +222,18 @@ namespace QuizGenAI.Services
             }
 
             return string.Format("{0:%m}m {0:%s}s", timeSpan);
+        }
+
+        private static DateTime NormalizeStoredLocal(DateTime value)
+        {
+            return value.Kind == DateTimeKind.Local
+                ? value
+                : DateTime.SpecifyKind(value, DateTimeKind.Local);
+        }
+
+        private static string FormatStoredLocalForDisplay(DateTime value)
+        {
+            return NormalizeStoredLocal(value).ToString("g");
         }
     }
 }

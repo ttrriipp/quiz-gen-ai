@@ -16,7 +16,7 @@ namespace QuizGenAI.DTOs
         public string SubjectName { get; set; }
         public string Topic { get; set; }
         public int DurationMinutes { get; set; }
-        public DateTime StartedAtUtc { get; set; }
+        public DateTime StartedAtLocal { get; set; }
         public List<ExamQuestionDto> Questions { get; set; }
     }
 }
