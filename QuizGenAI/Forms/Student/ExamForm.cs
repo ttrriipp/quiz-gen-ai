@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
@@ -11,6 +12,16 @@ namespace QuizGenAI.Forms.Student
 {
     public partial class ExamForm : Form
     {
+        private static readonly Color ReportsCardBg = Color.FromArgb(16, 58, 44);
+        private static readonly Color ReportsInnerBg = Color.FromArgb(12, 46, 36);
+        private static readonly Color ReportsBorder = Color.FromArgb(72, 255, 255, 255);
+        private static readonly Color ReportsTextPrimary = Color.White;
+        private static readonly Color ReportsTextMuted = Color.FromArgb(196, 210, 200);
+        private static readonly Color ReportsAccent = Color.FromArgb(168, 230, 198);
+        private static readonly Color ReportsSuccess = Color.FromArgb(34, 197, 94);
+        private static readonly Color ReportsMustard = Color.FromArgb(212, 175, 80);
+        private static readonly Color ReportsMustardBorder = Color.FromArgb(235, 205, 130);
+
         private readonly ExamService _examService = new ExamService();
         private readonly RecommendationService _recommendationService = new RecommendationService();
         private readonly int _studentId;
@@ -230,7 +241,8 @@ namespace QuizGenAI.Forms.Student
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(0, 4, 0, 0)
+                Padding = new Padding(0, 4, 0, 0),
+                BackColor = Color.Transparent
             };
 
             panel.Controls.Add(_choicesPanel);
@@ -415,45 +427,68 @@ namespace QuizGenAI.Forms.Student
 
             foreach (var choice in question.Choices)
             {
+                var isSelected = question.SelectedChoiceId == choice.Id;
                 var optionPanel = new Panel
                 {
                     Width = Math.Max(640, _choicesPanel.ClientSize.Width - 30),
-                    Height = 58,
-                    BackColor = Color.White,
-                    BorderStyle = BorderStyle.FixedSingle,
+                    Height = 72,
+                    BackColor = isSelected ? ReportsCardBg : ReportsInnerBg,
+                    BorderStyle = BorderStyle.None,
                     Margin = new Padding(0, 0, 0, 12),
-                    Padding = new Padding(14, 10, 14, 10)
+                    Padding = new Padding(16, 12, 16, 12),
+                    Tag = choice.Id,
+                    Cursor = Cursors.Hand
                 };
+                if (isSelected)
+                {
+                    optionPanel.Paint += ChoiceCardSelected_Paint;
+                }
+                else
+                {
+                    optionPanel.Paint += ChoiceCard_Paint;
+                }
+                optionPanel.Click += ChoiceCard_Click;
 
                 var radioButton = new RadioButton
                 {
-                    Dock = DockStyle.Fill,
+                    AutoSize = false,
+                    Dock = DockStyle.Left,
+                    Width = 28,
                     Font = new Font("Segoe UI", 10.5F),
-                    Text = choice.Text,
                     Checked = question.SelectedChoiceId == choice.Id,
-                    Tag = choice.Id
+                    Tag = choice.Id,
+                    BackColor = Color.Transparent,
+                    ForeColor = ReportsTextPrimary,
+                    Cursor = Cursors.Hand
                 };
                 radioButton.CheckedChanged += ChoiceRadio_CheckedChanged;
+                radioButton.Click += ChoiceCard_Click;
 
+                var textLabel = new Label
+                {
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 10.5F),
+                    ForeColor = ReportsTextPrimary,
+                    BackColor = Color.Transparent,
+                    Text = choice.Text,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    AutoEllipsis = true,
+                    Cursor = Cursors.Hand,
+                    Tag = choice.Id
+                };
+                textLabel.Click += ChoiceCard_Click;
+
+                if (isSelected)
+                {
+                    var selectedBadge = CreateSelectedChoiceBadge();
+                    selectedBadge.Dock = DockStyle.Right;
+                    optionPanel.Controls.Add(selectedBadge);
+                }
+
+                optionPanel.Controls.Add(textLabel);
                 optionPanel.Controls.Add(radioButton);
                 _choicesPanel.Controls.Add(optionPanel);
             }
-
-            var clearButton = new Button
-            {
-                Width = 150,
-                Height = 40,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                Text = "Clear Answer",
-                Cursor = Cursors.Hand,
-                Margin = new Padding(0, 4, 0, 0)
-            };
-            clearButton.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-            clearButton.Click += ClearButton_Click;
-            _choicesPanel.Controls.Add(clearButton);
 
             _choicesPanel.ResumeLayout();
 
@@ -508,9 +543,20 @@ namespace QuizGenAI.Forms.Student
             SaveCurrentSelection(choiceId);
         }
 
-        private void ClearButton_Click(object sender, EventArgs e)
+        private void ChoiceCard_Click(object sender, EventArgs e)
         {
-            SaveCurrentSelection(null);
+            if (_session == null)
+            {
+                return;
+            }
+
+            var source = sender as Control;
+            if (source == null || source.Tag == null)
+            {
+                return;
+            }
+
+            SaveCurrentSelection(Convert.ToInt32(source.Tag));
             RenderQuestion();
         }
 
@@ -680,6 +726,96 @@ namespace QuizGenAI.Forms.Student
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0)
             };
+        }
+
+        private static void ChoiceCard_Paint(object sender, PaintEventArgs e)
+        {
+            PaintRoundedBorder(sender as Panel, e, ReportsBorder, 10);
+        }
+
+        private static void ChoiceCardSelected_Paint(object sender, PaintEventArgs e)
+        {
+            PaintRoundedBorder(sender as Panel, e, ReportsMustardBorder, 10);
+        }
+
+        private static void PaintRoundedBorder(Panel panel, PaintEventArgs e, Color borderColor, int radius)
+        {
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            using (var path = new GraphicsPath())
+            {
+                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var pen = new Pen(borderColor, 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+        }
+
+        private static Control CreateSelectedChoiceBadge()
+        {
+            var panel = new Panel
+            {
+                Width = 118,
+                Dock = DockStyle.Right,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty
+            };
+
+            var chip = new Panel
+            {
+                Width = 94,
+                Height = 28,
+                BackColor = ReportsSuccess,
+                Margin = Padding.Empty,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            chip.Paint += SelectedBadge_Paint;
+
+            var icon = new Label
+            {
+                Dock = DockStyle.Left,
+                Width = 24,
+                Font = new Font("Segoe UI Symbol", 10F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                Text = "\u2713",
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            var text = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                Text = "SELECTED",
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            chip.Controls.Add(text);
+            chip.Controls.Add(icon);
+            panel.Controls.Add(chip);
+            panel.Resize += delegate
+            {
+                chip.Location = new Point(Math.Max(0, panel.ClientSize.Width - chip.Width), Math.Max(0, (panel.ClientSize.Height - chip.Height) / 2));
+            };
+
+            return panel;
+        }
+
+        private static void SelectedBadge_Paint(object sender, PaintEventArgs e)
+        {
+            PaintRoundedBorder(sender as Panel, e, Color.FromArgb(190, 255, 255, 255), 10);
         }
     }
 }
