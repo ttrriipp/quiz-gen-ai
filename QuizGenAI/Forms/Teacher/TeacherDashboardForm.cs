@@ -4,20 +4,25 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Guna.UI2.WinForms;
 using QuizGenAI.DTOs;
+using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
 {
     public partial class TeacherDashboardForm : Form
     {
-        private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
+        private readonly Dictionary<string, Guna2Button> _navButtons = new Dictionary<string, Guna2Button>();
         private readonly ReportService _reportService = new ReportService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
+        private Panel _topBar;
         private Panel _contentHost;
         private Label _lblGreeting;
         private Form _hostedContentForm;
+
+        private static readonly Color MainWorkspaceGreen = Color.FromArgb(11, 48, 34);
         private string _displayName = "Teacher";
         public int CurrentUserId { get; set; }
 
@@ -26,6 +31,7 @@ namespace QuizGenAI.Forms.Teacher
             InitializeComponent();
             BuildShell();
             ShowSection("dashboard");
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         public string DisplayName
@@ -46,9 +52,11 @@ namespace QuizGenAI.Forms.Teacher
             SuspendLayout();
             Controls.Clear();
 
-            BackColor = Color.FromArgb(245, 247, 250);
+            BackColor = MainWorkspaceGreen;
             Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            MinimumSize = new Size(1180, 760);
+            ClientSize = new Size(1280, 800);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Teacher Dashboard";
 
@@ -106,14 +114,41 @@ namespace QuizGenAI.Forms.Teacher
             var footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 92,
-                Padding = new Padding(20, 12, 20, 20)
+                Height = 132,
+                Padding = new Padding(20, 12, 20, 16)
+            };
+
+            var btnLogout = new Guna2Button
+            {
+                Dock = DockStyle.Top,
+                Height = 38,
+                BorderRadius = 8,
+                FillColor = Color.FromArgb(185, 28, 28),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = "Logout",
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            btnLogout.Click += delegate
+            {
+                var result = MessageBox.Show(
+                    "Do you want to logout and return to the login screen?",
+                    "Confirm Logout",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    Close();
+                }
             };
 
             _lblGreeting = new Label
             {
                 AutoSize = false,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                Height = 48,
                 ForeColor = Color.FromArgb(209, 213, 219),
                 Font = new Font("Segoe UI", 10F),
                 TextAlign = ContentAlignment.BottomLeft,
@@ -121,72 +156,73 @@ namespace QuizGenAI.Forms.Teacher
             };
 
             footerPanel.Controls.Add(_lblGreeting);
+            footerPanel.Controls.Add(btnLogout);
 
             sidebar.Controls.Add(footerPanel);
             sidebar.Controls.Add(navPanel);
             sidebar.Controls.Add(brandingPanel);
 
-            var topBar = new Panel
+            _topBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 88,
-                BackColor = Color.White,
-                Padding = new Padding(28, 20, 28, 16)
+                Height = 76,
+                BackColor = MainWorkspaceGreen,
+                Padding = new Padding(28, 12, 28, 10)
             };
 
             _lblPageTitle = new Label
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 32,
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(17, 24, 39)
+                Height = 36,
+                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold)
             };
 
             _lblPageDescription = new Label
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(107, 114, 128)
+                Height = 20,
+                Font = new Font("Segoe UI", 10F)
             };
 
-            topBar.Controls.Add(_lblPageDescription);
-            topBar.Controls.Add(_lblPageTitle);
+            _topBar.Controls.Add(_lblPageDescription);
+            _topBar.Controls.Add(_lblPageTitle);
 
             _contentHost = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(28, 24, 28, 28),
-                BackColor = Color.FromArgb(245, 247, 250)
+                AutoScroll = true,
+                Padding = new Padding(20, 16, 20, 20),
+                BackColor = MainWorkspaceGreen
             };
 
             Controls.Add(_contentHost);
-            Controls.Add(topBar);
+            Controls.Add(_topBar);
             Controls.Add(sidebar);
             ResumeLayout();
         }
 
-        private Button CreateNavButton(string key, string text)
+        private Guna2Button CreateNavButton(string key, string text)
         {
-            var button = new Button
+            var button = new Guna2Button
             {
                 Width = 208,
                 Height = 46,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(31, 41, 55),
                 ForeColor = Color.FromArgb(229, 231, 235),
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = text,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(16, 0, 0, 0),
                 Tag = key,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 0, 10)
             };
-
-            button.FlatAppearance.BorderSize = 0;
+            button.BorderRadius = 10;
+            button.FillColor = Color.FromArgb(31, 41, 55);
+            button.HoverState.FillColor = Color.FromArgb(36, 52, 78);
+            button.PressedColor = Color.FromArgb(24, 36, 56);
+            button.TextAlign = HorizontalAlignment.Left;
+            button.TextOffset = new Point(12, 0);
             button.Click += NavButton_Click;
             _navButtons[key] = button;
             return button;
@@ -194,7 +230,7 @@ namespace QuizGenAI.Forms.Teacher
 
         private void NavButton_Click(object sender, EventArgs e)
         {
-            var button = sender as Button;
+            var button = sender as Control;
             if (button == null)
             {
                 return;
@@ -209,7 +245,7 @@ namespace QuizGenAI.Forms.Teacher
             foreach (var pair in _navButtons)
             {
                 var isActive = pair.Key == sectionKey;
-                pair.Value.BackColor = isActive ? Color.FromArgb(14, 116, 144) : Color.FromArgb(31, 41, 55);
+                pair.Value.FillColor = isActive ? Color.FromArgb(14, 116, 144) : Color.FromArgb(31, 41, 55);
                 pair.Value.ForeColor = isActive ? Color.White : Color.FromArgb(229, 231, 235);
             }
 
@@ -261,7 +297,8 @@ namespace QuizGenAI.Forms.Teacher
                 BackColor = Color.Transparent
             };
 
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 124F));
+            root.RowStyles.Clear();
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 168F));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -360,19 +397,18 @@ namespace QuizGenAI.Forms.Teacher
             summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126F));
 
-            var btnRefresh = new Button
+            var btnRefresh = new Guna2Button
             {
                 Anchor = AnchorStyles.Right,
                 Width = 110,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(15, 118, 110),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = "Refresh",
                 Cursor = Cursors.Hand
             };
-            btnRefresh.FlatAppearance.BorderSize = 0;
+            btnRefresh.BorderRadius = 9;
+            btnRefresh.FillColor = Color.FromArgb(15, 118, 110);
             btnRefresh.Click += delegate { RenderLogsView(); };
 
             var lblSummary = new Label
@@ -431,6 +467,8 @@ namespace QuizGenAI.Forms.Teacher
 
             _contentHost.Controls.Add(_hostedContentForm);
             _hostedContentForm.Show();
+            _contentHost.PerformLayout();
+            _hostedContentForm.PerformLayout();
         }
 
         private void ClearHostedContentForm()
@@ -454,27 +492,40 @@ namespace QuizGenAI.Forms.Teacher
             var panel = CreateSurfacePanel();
             panel.Padding = new Padding(26, 22, 26, 22);
 
-            var actionButton = new Button
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170F));
+
+            var actionButton = new Guna2Button
             {
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Width = 144,
                 Height = 42,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(15, 118, 110),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = buttonText,
-                Location = new Point(panel.Width - 180, 24),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Margin = new Padding(8, 6, 0, 0)
             };
-            actionButton.FlatAppearance.BorderSize = 0;
+            actionButton.BorderRadius = 10;
+            actionButton.FillColor = Color.FromArgb(15, 118, 110);
+
+            var textHost = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
 
             var lblTitle = new Label
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 38,
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
+                Height = 42,
+                Font = new Font("Segoe UI Semibold", 23F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(17, 24, 39),
                 Text = title
             };
@@ -483,20 +534,17 @@ namespace QuizGenAI.Forms.Teacher
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 54,
-                Font = new Font("Segoe UI", 10F),
+                Height = 64,
+                Font = new Font("Segoe UI", 11F),
                 ForeColor = Color.FromArgb(75, 85, 99),
                 Text = description
             };
 
-            panel.Resize += delegate
-            {
-                actionButton.Left = panel.ClientSize.Width - actionButton.Width - 26;
-            };
-
-            panel.Controls.Add(actionButton);
-            panel.Controls.Add(lblDescription);
-            panel.Controls.Add(lblTitle);
+            textHost.Controls.Add(lblDescription);
+            textHost.Controls.Add(lblTitle);
+            layout.Controls.Add(textHost, 0, 0);
+            layout.Controls.Add(actionButton, 1, 0);
+            panel.Controls.Add(layout);
             return panel;
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Guna.UI2.WinForms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Helpers;
 using QuizGenAI.Services;
@@ -11,7 +12,7 @@ namespace QuizGenAI.Forms.Student
 {
     public partial class StudentQuizzesForm : Form
     {
-        private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
+        private readonly Dictionary<string, Guna2Button> _navButtons = new Dictionary<string, Guna2Button>();
         private readonly ExamService _examService = new ExamService();
         private readonly QuizService _quizService = new QuizService();
         private readonly RecommendationService _recommendationService = new RecommendationService();
@@ -29,6 +30,7 @@ namespace QuizGenAI.Forms.Student
             InitializeComponent();
             BuildShell();
             ShowSection("quizzes");
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         public string DisplayName
@@ -64,7 +66,9 @@ namespace QuizGenAI.Forms.Student
 
             BackColor = Color.FromArgb(244, 246, 248);
             Font = new Font("Segoe UI", 10F);
-            MinimumSize = new Size(1120, 720);
+            ClientSize = new Size(1220, 780);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Student Workspace";
 
@@ -120,13 +124,40 @@ namespace QuizGenAI.Forms.Student
             var footer = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 88,
-                Padding = new Padding(20, 12, 20, 20)
+                Height = 126,
+                Padding = new Padding(20, 12, 20, 16)
+            };
+
+            var btnLogout = new Guna2Button
+            {
+                Dock = DockStyle.Top,
+                Height = 38,
+                BorderRadius = 8,
+                FillColor = Color.FromArgb(185, 28, 28),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = "Logout",
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            btnLogout.Click += delegate
+            {
+                var result = MessageBox.Show(
+                    "Do you want to logout and return to the login screen?",
+                    "Confirm Logout",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    Close();
+                }
             };
 
             _lblGreeting = new Label
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                Height = 44,
                 ForeColor = Color.FromArgb(203, 213, 225),
                 Font = new Font("Segoe UI", 10F),
                 Text = string.Format("Signed in as {0}", _displayName),
@@ -134,6 +165,7 @@ namespace QuizGenAI.Forms.Student
             };
 
             footer.Controls.Add(_lblGreeting);
+            footer.Controls.Add(btnLogout);
             sidebar.Controls.Add(footer);
             sidebar.Controls.Add(navPanel);
             sidebar.Controls.Add(branding);
@@ -141,16 +173,16 @@ namespace QuizGenAI.Forms.Student
             var topBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 88,
+                Height = 102,
                 BackColor = Color.White,
-                Padding = new Padding(28, 20, 28, 16)
+                Padding = new Padding(28, 16, 28, 14)
             };
 
             _lblPageTitle = new Label
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 32,
+                Height = 40,
                 Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42)
             };
@@ -159,7 +191,7 @@ namespace QuizGenAI.Forms.Student
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = 28,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(100, 116, 139)
             };
@@ -170,6 +202,7 @@ namespace QuizGenAI.Forms.Student
             _contentHost = new Panel
             {
                 Dock = DockStyle.Fill,
+                AutoScroll = true,
                 Padding = new Padding(28, 24, 28, 28),
                 BackColor = Color.FromArgb(244, 246, 248)
             };
@@ -180,25 +213,24 @@ namespace QuizGenAI.Forms.Student
             ResumeLayout();
         }
 
-        private Button CreateNavButton(string key, string text)
+        private Guna2Button CreateNavButton(string key, string text)
         {
-            var button = new Button
+            var button = new Guna2Button
             {
                 Width = 188,
                 Height = 46,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(15, 23, 42),
                 ForeColor = Color.FromArgb(226, 232, 240),
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = text,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(16, 0, 0, 0),
                 Tag = key,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 0, 10)
             };
-
-            button.FlatAppearance.BorderSize = 0;
+            button.BorderRadius = 10;
+            button.FillColor = Color.FromArgb(15, 23, 42);
+            button.HoverState.FillColor = Color.FromArgb(26, 40, 68);
+            button.TextAlign = HorizontalAlignment.Left;
+            button.TextOffset = new Point(12, 0);
             button.Click += NavButton_Click;
             _navButtons[key] = button;
             return button;
@@ -206,7 +238,7 @@ namespace QuizGenAI.Forms.Student
 
         private void NavButton_Click(object sender, EventArgs e)
         {
-            var button = sender as Button;
+            var button = sender as Control;
             if (button == null)
             {
                 return;
@@ -222,7 +254,7 @@ namespace QuizGenAI.Forms.Student
             foreach (var pair in _navButtons)
             {
                 var isActive = pair.Key == _activeSection;
-                pair.Value.BackColor = isActive ? Color.FromArgb(3, 105, 161) : Color.FromArgb(15, 23, 42);
+                pair.Value.FillColor = isActive ? Color.FromArgb(3, 105, 161) : Color.FromArgb(15, 23, 42);
                 pair.Value.ForeColor = isActive ? Color.White : Color.FromArgb(226, 232, 240);
             }
 
@@ -371,7 +403,31 @@ namespace QuizGenAI.Forms.Student
             var panel = CreateSurfacePanel();
             panel.Padding = new Padding(20, 18, 20, 20);
 
-            panel.Controls.Add(new Label
+            var scrollHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true
+            };
+
+            var content = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+
+            var topSection = new Panel
+            {
+                Width = 760,
+                Height = 62,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+
+            topSection.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
                 Height = 24,
@@ -380,7 +436,7 @@ namespace QuizGenAI.Forms.Student
                 Text = "Most recent submitted attempts"
             });
 
-            panel.Controls.Add(new Label
+            topSection.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
                 Height = 30,
@@ -389,33 +445,46 @@ namespace QuizGenAI.Forms.Student
                 Text = "Results history"
             });
 
+            var recommendationPanel = default(Control);
             if (results.LatestRecommendations.Count > 0 || !string.IsNullOrWhiteSpace(results.LatestWeakAreaSummary))
             {
-                panel.Controls.Add(CreateLatestRecommendationPanel(results));
+                recommendationPanel = CreateLatestRecommendationPanel(results);
+                recommendationPanel.Margin = new Padding(0, 0, 0, 12);
             }
 
-            var flow = new FlowLayoutPanel
+            var resultsFlow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Width = 760,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
-                Padding = new Padding(0, 8, 0, 0)
+                AutoScroll = false,
+                Padding = new Padding(0, 0, 0, 0),
+                Margin = new Padding(0)
             };
 
             if (results.History.Count == 0)
             {
-                flow.Controls.Add(CreateEmptyStateCard("No submitted results yet. Finish an exam and the result history will appear here."));
+                resultsFlow.Controls.Add(CreateEmptyStateCard("No submitted results yet. Finish an exam and the result history will appear here."));
             }
             else
             {
                 foreach (var item in results.History)
                 {
-                    flow.Controls.Add(CreateResultHistoryCard(item));
+                    resultsFlow.Controls.Add(CreateResultHistoryCard(item));
                 }
             }
 
-            panel.Controls.Add(flow);
+            content.Controls.Add(topSection);
+            if (recommendationPanel != null)
+            {
+                content.Controls.Add(recommendationPanel);
+            }
+            content.Controls.Add(resultsFlow);
+            scrollHost.Controls.Add(content);
+            panel.Controls.Add(scrollHost);
+            FitResultCardWidths(content, topSection, recommendationPanel, resultsFlow, 760);
             return panel;
         }
 
@@ -465,7 +534,7 @@ namespace QuizGenAI.Forms.Student
         {
             var panel = new Panel
             {
-                Width = 930,
+                Width = 760,
                 Height = 138,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -534,6 +603,36 @@ namespace QuizGenAI.Forms.Student
             panel.Controls.Add(body);
             panel.Controls.Add(scorePanel);
             return panel;
+        }
+
+        private static void FitResultCardWidths(FlowLayoutPanel content, Panel topSection, Control recommendationPanel, FlowLayoutPanel resultsFlow, int minWidth)
+        {
+            if (content == null || resultsFlow == null || topSection == null)
+            {
+                return;
+            }
+
+            Action resizeCards = delegate
+            {
+                var targetWidth = Math.Max(minWidth, content.Parent != null ? content.Parent.ClientSize.Width - 22 : minWidth);
+                topSection.Width = targetWidth;
+                if (recommendationPanel != null)
+                {
+                    recommendationPanel.Width = targetWidth;
+                }
+                resultsFlow.Width = targetWidth;
+
+                foreach (Control control in resultsFlow.Controls)
+                {
+                    control.Width = targetWidth;
+                }
+            };
+
+            resizeCards();
+            if (content.Parent != null)
+            {
+                content.Parent.Resize += delegate { resizeCards(); };
+            }
         }
 
         private Panel CreateHeroPanel(int quizCount)
@@ -663,12 +762,11 @@ namespace QuizGenAI.Forms.Student
                 Width = 190
             };
 
-            var btnStart = new Button
+            var btnStart = new Guna2Button
             {
                 Width = 150,
                 Height = 42,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(203, 213, 225),
+                FillColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(203, 213, 225),
                 ForeColor = quiz.CanStart ? Color.White : Color.FromArgb(71, 85, 105),
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
@@ -678,8 +776,7 @@ namespace QuizGenAI.Forms.Student
                 Left = 18,
                 Tag = quiz
             };
-
-            btnStart.FlatAppearance.BorderSize = 0;
+            btnStart.BorderRadius = 9;
             btnStart.Click += StartQuiz_Click;
 
             var lblAttemptInfo = new Label
@@ -752,7 +849,7 @@ namespace QuizGenAI.Forms.Student
 
         private void StartQuiz_Click(object sender, EventArgs e)
         {
-            var button = sender as Button;
+            var button = sender as Control;
             var quiz = button != null ? button.Tag as StudentQuizListItemDto : null;
             if (quiz == null)
             {

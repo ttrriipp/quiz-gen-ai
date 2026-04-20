@@ -35,6 +35,7 @@ namespace QuizGenAI.Forms.Teacher
             _quizService = new QuizService();
             _questions = new List<QuizQuestionEditorDto>();
             BuildLayout();
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         public int CurrentUserId { get; set; }
@@ -55,7 +56,9 @@ namespace QuizGenAI.Forms.Teacher
 
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
-            MinimumSize = new Size(1240, 860);
+            ClientSize = new Size(1440, 900);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Quiz Editor";
 
@@ -91,6 +94,7 @@ namespace QuizGenAI.Forms.Teacher
             var body = new Panel
             {
                 Dock = DockStyle.Fill,
+                AutoScroll = true,
                 Padding = new Padding(24)
             };
 
@@ -149,7 +153,7 @@ namespace QuizGenAI.Forms.Teacher
                 RowCount = 1,
                 Margin = new Padding(0, 18, 0, 0)
             };
-            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 420F));
             editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             editorArea.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -170,7 +174,8 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 10F),
-                IntegralHeight = false
+                IntegralHeight = false,
+                HorizontalScrollbar = true
             };
             _lstQuestions.SelectedIndexChanged += LstQuestions_SelectedIndexChanged;
 
@@ -209,7 +214,8 @@ namespace QuizGenAI.Forms.Teacher
             var questionScrollPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoScroll = true
+                AutoScroll = true,
+                Padding = new Padding(0, 0, 0, 14)
             };
 
             var questionLayout = new TableLayoutPanel
@@ -229,7 +235,7 @@ namespace QuizGenAI.Forms.Teacher
             questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
             questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
             questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
 
             _txtQuestionText = new TextBox { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical };
             _txtChoiceA = new TextBox { Dock = DockStyle.Fill };
@@ -262,7 +268,7 @@ namespace QuizGenAI.Forms.Teacher
             var questionButtons = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 44
+                Height = 52
             };
 
             var btnApply = CreatePrimaryButton("Apply Question");
@@ -272,8 +278,8 @@ namespace QuizGenAI.Forms.Teacher
 
             questionButtons.Controls.Add(btnApply);
             questionScrollPanel.Controls.Add(questionLayout);
-            questionPanel.Controls.Add(questionButtons);
             questionPanel.Controls.Add(questionScrollPanel);
+            questionPanel.Controls.Add(questionButtons);
 
             editorArea.Controls.Add(listPanel, 0, 0);
             editorArea.Controls.Add(questionPanel, 1, 0);
@@ -388,12 +394,21 @@ namespace QuizGenAI.Forms.Teacher
         private void RefreshQuestionList()
         {
             _lstQuestions.Items.Clear();
+            var horizontalExtent = 0;
+
             for (var i = 0; i < _questions.Count; i++)
             {
                 var question = _questions[i];
                 var label = string.Format("Q{0}. {1}", i + 1, question.Text);
                 _lstQuestions.Items.Add(label);
+                var measured = TextRenderer.MeasureText(label, _lstQuestions.Font).Width + 24;
+                if (measured > horizontalExtent)
+                {
+                    horizontalExtent = measured;
+                }
             }
+
+            _lstQuestions.HorizontalExtent = horizontalExtent;
         }
 
         private void LstQuestions_SelectedIndexChanged(object sender, EventArgs e)
@@ -586,8 +601,10 @@ namespace QuizGenAI.Forms.Teacher
             return new Label
             {
                 Dock = DockStyle.Fill,
+                AutoSize = false,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(107, 114, 128),
+                TextAlign = ContentAlignment.TopLeft,
                 Text = text
             };
         }

@@ -26,6 +26,7 @@ namespace QuizGenAI.Forms.Teacher
             _aiQuizService = new AiQuizService();
             _quizService = new QuizService();
             BuildLayout();
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         public AiQuizGenerationResultDto GeneratedResult { get; private set; }
@@ -42,7 +43,8 @@ namespace QuizGenAI.Forms.Teacher
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
             ClientSize = new Size(640, 420);
-            MinimumSize = new Size(640, 420);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "New AI Quiz";
 

@@ -40,6 +40,7 @@ namespace QuizGenAI.Forms.Student
 
             InitializeComponent();
             BuildLayout();
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         protected override void OnShown(EventArgs e)
@@ -86,7 +87,9 @@ namespace QuizGenAI.Forms.Student
 
             BackColor = Color.FromArgb(243, 244, 246);
             Font = new Font("Segoe UI", 10F);
-            MinimumSize = new Size(1200, 760);
+            ClientSize = new Size(1280, 820);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Exam";
 
@@ -100,7 +103,7 @@ namespace QuizGenAI.Forms.Student
 
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 74F));
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 94F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 124F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
 
@@ -125,24 +128,24 @@ namespace QuizGenAI.Forms.Student
         private Control BuildHeaderPanel()
         {
             var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(20, 16, 20, 16);
+            panel.Padding = new Padding(20, 18, 20, 18);
 
             var timerCard = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 180,
+                Width = 210,
                 BackColor = Color.FromArgb(15, 23, 42),
-                Padding = new Padding(16, 12, 16, 12)
+                Padding = new Padding(18, 12, 18, 12)
             };
 
             _lblTimerTitle = new Label
             {
                 AutoSize = false,
-                Left = 16,
-                Top = 12,
-                Width = 148,
-                Height = 22,
-                Font = new Font("Segoe UI", 9F),
+                Left = 18,
+                Top = 10,
+                Width = 170,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Text = "Time Remaining",
                 TextAlign = ContentAlignment.MiddleLeft
@@ -151,11 +154,11 @@ namespace QuizGenAI.Forms.Student
             _lblTimerValue = new Label
             {
                 AutoSize = false,
-                Left = 16,
-                Top = 38,
-                Width = 148,
-                Height = 30,
-                Font = new Font("Consolas", 18F, FontStyle.Bold),
+                Left = 18,
+                Top = 40,
+                Width = 170,
+                Height = 40,
+                Font = new Font("Consolas", 22F, FontStyle.Bold),
                 ForeColor = Color.White,
                 Text = "00:00",
                 TextAlign = ContentAlignment.MiddleLeft

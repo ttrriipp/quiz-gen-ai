@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
+using QuizGenAI.Helpers;
 
 namespace QuizGenAI.Forms.Student
 {
@@ -19,6 +20,7 @@ namespace QuizGenAI.Forms.Student
             _summary = summary;
             InitializeComponent();
             BuildLayout();
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         private void BuildLayout()
@@ -28,7 +30,9 @@ namespace QuizGenAI.Forms.Student
 
             BackColor = Color.FromArgb(243, 244, 246);
             Font = new Font("Segoe UI", 10F);
-            MinimumSize = new Size(900, 640);
+            ClientSize = new Size(980, 700);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Result Summary";
 
@@ -40,7 +44,7 @@ namespace QuizGenAI.Forms.Student
                 Padding = new Padding(20)
             };
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 108F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 150F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 178F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             root.Controls.Add(BuildHeaderPanel(), 0, 0);
@@ -270,7 +274,7 @@ namespace QuizGenAI.Forms.Student
         private static Control CreateMetricCard(string title, string value, string note)
         {
             var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(20, 18, 20, 18);
+            panel.Padding = new Padding(20, 16, 20, 16);
             panel.Margin = new Padding(0, 0, 18, 0);
 
             panel.Controls.Add(new Label
@@ -278,13 +282,14 @@ namespace QuizGenAI.Forms.Student
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5F),
                 ForeColor = Color.FromArgb(100, 116, 139),
+                AutoEllipsis = true,
                 Text = note
             });
 
             panel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
-                Height = 42,
+                Height = 50,
                 Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Text = value

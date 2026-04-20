@@ -1,5 +1,6 @@
 using System;
 using System.Data.Entity;
+using System.Globalization;
 using System.Linq;
 using QuizGenAI.Data;
 using QuizGenAI.DTOs;
@@ -39,6 +40,27 @@ namespace QuizGenAI.Services
                     .OrderByDescending(x => x.AverageScore)
                     .Take(6)
                     .ToList();
+
+                var today = DateTime.Today;
+                var endMonth = new DateTime(today.Year, today.Month, 1);
+                for (var i = 5; i >= 0; i--)
+                {
+                    var monthStart = endMonth.AddMonths(-i);
+                    var monthEnd = monthStart.AddMonths(1);
+                    var inMonth = submittedAttempts
+                        .Where(x => x.SubmittedAt.HasValue
+                            && x.SubmittedAt.Value >= monthStart
+                            && x.SubmittedAt.Value < monthEnd)
+                        .ToList();
+                    double? monthAvg = inMonth.Count == 0
+                        ? (double?)null
+                        : Math.Round(inMonth.Average(x => x.ScorePercentage ?? 0), 1);
+                    reports.ScoreTrendByMonth.Add(new ScoreTrendMonthDto
+                    {
+                        MonthLabel = monthStart.ToString("MMM", CultureInfo.InvariantCulture),
+                        AverageScore = monthAvg
+                    });
+                }
 
                 reports.RecentSubmissions = submittedAttempts
                     .OrderByDescending(x => x.SubmittedAt)

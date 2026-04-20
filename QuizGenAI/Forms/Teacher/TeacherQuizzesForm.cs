@@ -24,6 +24,7 @@ namespace QuizGenAI.Forms.Teacher
             InitializeComponent();
             _quizService = new QuizService();
             BuildLayout();
+            AppTheme.ApplyCognitaTheme(this);
         }
 
         public int CurrentUserId { get; set; }
@@ -42,22 +43,24 @@ namespace QuizGenAI.Forms.Teacher
 
             BackColor = Color.FromArgb(244, 246, 248);
             Font = new Font("Segoe UI", 10F);
-            MinimumSize = new Size(1180, 760);
+            ClientSize = new Size(1180, 760);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Teacher Quizzes";
 
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 126,
+                Height = 170,
                 BackColor = Color.White,
-                Padding = new Padding(24, 20, 24, 18)
+                Padding = new Padding(24, 18, 24, 16)
             };
 
             var lblTitle = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 34,
+                Height = 44,
                 Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(17, 24, 39),
                 Text = "Quiz Management"
@@ -66,7 +69,7 @@ namespace QuizGenAI.Forms.Teacher
             _lblSummary = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = 32,
                 Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(75, 85, 99),
                 Text = "Search, review, and maintain draft quizzes."
@@ -75,7 +78,8 @@ namespace QuizGenAI.Forms.Teacher
             var filtersPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 42
+                Height = 52,
+                Padding = new Padding(0, 8, 0, 0)
             };
 
             _txtSearch = new TextBox
@@ -176,8 +180,8 @@ namespace QuizGenAI.Forms.Teacher
         {
             var card = new Panel
             {
-                Width = 330,
-                Height = 240,
+                Width = 560,
+                Height = 272,
                 Margin = new Padding(0, 0, 18, 18),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -212,7 +216,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 54,
+                Height = 62,
                 Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(17, 24, 39),
                 Text = quiz.Title
@@ -232,7 +236,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 44,
+                Height = 34,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(55, 65, 81),
                 Text = string.Format(
@@ -256,25 +260,25 @@ namespace QuizGenAI.Forms.Teacher
             var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 84
+                Height = 42
             };
 
             var btnEdit = CreateActionButton("Edit");
-            btnEdit.Width = 88;
+            btnEdit.Width = 126;
             btnEdit.Location = new Point(0, 4);
             btnEdit.Click += delegate { OpenEditor(quiz.Id); };
 
             var btnStatus = CreateActionButton(GetPrimaryStatusActionLabel(quiz));
-            btnStatus.Width = 120;
-            btnStatus.Location = new Point(98, 4);
+            btnStatus.Width = 146;
+            btnStatus.Location = new Point(136, 4);
             btnStatus.Click += delegate { HandlePrimaryStatusAction(quiz); };
 
             var btnArchive = new Button
             {
                 Text = "Archive",
-                Width = 88,
+                Width = 126,
                 Height = 34,
-                Location = new Point(228, 4),
+                Location = new Point(290, 4),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
             };
@@ -284,9 +288,9 @@ namespace QuizGenAI.Forms.Teacher
             var btnDelete = new Button
             {
                 Text = "Delete",
-                Width = 88,
+                Width = 126,
                 Height = 34,
-                Location = new Point(0, 44),
+                Location = new Point(426, 4),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(185, 28, 28),
                 Cursor = Cursors.Hand
