@@ -4,14 +4,15 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Forms.DataVisualization.Charting;
+using ScottPlot.WinForms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Helpers;
 using QuizGenAI.Services;
+using ScottColor = ScottPlot.Color;
 
 namespace QuizGenAI.Forms.Teacher
 {
-    public partial class ReportsForm : Form
+    public partial class ReportsForm : UserControl
     {
         private static readonly Color WorkspaceBg = Color.FromArgb(11, 48, 34);
         private static readonly Color CardBg = Color.FromArgb(16, 58, 44);
@@ -26,22 +27,22 @@ namespace QuizGenAI.Forms.Teacher
         private readonly ReportService _reportService = new ReportService();
         private Panel _reportsScrollHost;
         private TableLayoutPanel _reportsRootLayout;
-        private Chart _averageScoreChart;
-        private Chart _subjectMasteryChart;
+        private FormsPlot _averageScoreChart;
+        private FormsPlot _subjectMasteryChart;
 
         public ReportsForm()
         {
             InitializeComponent();
-            Tag = AppTheme.SkipCognitaThemeTag;
             BuildLayout();
+            Tag = AppTheme.SkipCognitaThemeTag;
+            Load += ReportsForm_Load;
         }
 
         public int CurrentUserId { get; set; }
         public string DisplayName { get; set; }
 
-        protected override void OnShown(EventArgs e)
+        private void ReportsForm_Load(object sender, EventArgs e)
         {
-            base.OnShown(e);
             RenderReports();
             if (IsHandleCreated)
             {
@@ -49,18 +50,30 @@ namespace QuizGenAI.Forms.Teacher
             }
         }
 
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            if (!Visible || !IsHandleCreated)
+            {
+                return;
+            }
+
+            RenderReports();
+            BeginInvoke(new Action(InvalidateChartsAfterLayout));
+        }
+
         private void InvalidateChartsAfterLayout()
         {
             if (_averageScoreChart != null)
             {
                 _averageScoreChart.PerformLayout();
-                _averageScoreChart.Invalidate();
+                _averageScoreChart.Refresh();
             }
 
             if (_subjectMasteryChart != null)
             {
                 _subjectMasteryChart.PerformLayout();
-                _subjectMasteryChart.Invalidate();
+                _subjectMasteryChart.Refresh();
             }
         }
 
@@ -72,11 +85,7 @@ namespace QuizGenAI.Forms.Teacher
             BackColor = WorkspaceBg;
             ForeColor = TextPrimary;
             Font = new Font("Segoe UI", 10F);
-            ClientSize = new Size(1280, 900);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            Text = "Reports";
+            Size = new Size(1280, 900);
 
             _reportsScrollHost = new Panel
             {
@@ -221,6 +230,13 @@ namespace QuizGenAI.Forms.Teacher
                 BackColor = ChartPlotBg
             };
 
+            var chartHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ChartPlotBg,
+                Padding = new Padding(8, 8, 8, 8)
+            };
+
             var title = new Label
             {
                 Dock = DockStyle.Top,
@@ -232,7 +248,8 @@ namespace QuizGenAI.Forms.Teacher
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            host.Controls.Add(_averageScoreChart);
+            chartHost.Controls.Add(_averageScoreChart);
+            host.Controls.Add(chartHost);
             host.Controls.Add(title);
 
             panel.Controls.Add(host);
@@ -253,6 +270,13 @@ namespace QuizGenAI.Forms.Teacher
                 BackColor = ChartPlotBg
             };
 
+            var chartHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ChartPlotBg,
+                Padding = new Padding(8, 8, 8, 8)
+            };
+
             var title = new Label
             {
                 Dock = DockStyle.Top,
@@ -264,108 +288,52 @@ namespace QuizGenAI.Forms.Teacher
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            host.Controls.Add(_subjectMasteryChart);
+            chartHost.Controls.Add(_subjectMasteryChart);
+            host.Controls.Add(chartHost);
             host.Controls.Add(title);
 
             panel.Controls.Add(host);
             return panel;
         }
 
-        private static Chart CreateTrendChart()
+        private static FormsPlot CreateTrendChart()
         {
-            var chart = new Chart
+            var chart = new FormsPlot
             {
+                BackColor = ChartPlotBg,
                 Dock = DockStyle.Fill,
-                BackColor = ChartPlotBg,
-                MinimumSize = new Size(240, 220)
+                Margin = Padding.Empty
             };
-            chart.Legends.Clear();
-
-            var area = new ChartArea("main")
-            {
-                BackColor = ChartPlotBg,
-                BorderColor = SubtleBorder,
-                BorderDashStyle = ChartDashStyle.Solid,
-                BorderWidth = 1
-            };
-            area.InnerPlotPosition = new ElementPosition(10, 8, 86, 82);
-
-            StyleAxis(area.AxisX);
-            StyleAxis(area.AxisY);
-            area.AxisX.MajorGrid.Enabled = true;
-            area.AxisY.MajorGrid.Enabled = true;
-            area.AxisX.MajorGrid.LineColor = Color.FromArgb(48, 255, 255, 255);
-            area.AxisY.MajorGrid.LineColor = Color.FromArgb(48, 255, 255, 255);
-            area.AxisX.MajorGrid.LineDashStyle = ChartDashStyle.Dash;
-            area.AxisY.MajorGrid.LineDashStyle = ChartDashStyle.Dash;
-
-            chart.ChartAreas.Add(area);
-
-            var series = new Series("trend")
-            {
-                ChartType = SeriesChartType.Line,
-                ChartArea = "main",
-                Color = AccentLine,
-                BorderColor = AccentLine,
-                BorderWidth = 2,
-                MarkerStyle = MarkerStyle.Circle,
-                MarkerSize = 8,
-                MarkerColor = AccentLine,
-                BorderDashStyle = ChartDashStyle.Solid
-            };
-            chart.Series.Add(series);
-
+            ApplyPlotTheme(chart.Plot);
             return chart;
         }
 
-        private static Chart CreateSubjectChart()
+        private static FormsPlot CreateSubjectChart()
         {
-            var chart = new Chart
+            var chart = new FormsPlot
             {
+                BackColor = ChartPlotBg,
                 Dock = DockStyle.Fill,
-                BackColor = ChartPlotBg,
-                MinimumSize = new Size(240, 220)
+                Margin = Padding.Empty
             };
-            chart.Legends.Clear();
-
-            var area = new ChartArea("main")
-            {
-                BackColor = ChartPlotBg,
-                BorderColor = SubtleBorder,
-                BorderDashStyle = ChartDashStyle.Solid,
-                BorderWidth = 1
-            };
-            area.InnerPlotPosition = new ElementPosition(12, 8, 84, 82);
-
-            StyleAxis(area.AxisX);
-            StyleAxis(area.AxisY);
-            area.AxisX.MajorGrid.Enabled = true;
-            area.AxisY.MajorGrid.Enabled = true;
-            area.AxisX.MajorGrid.LineColor = Color.FromArgb(48, 255, 255, 255);
-            area.AxisY.MajorGrid.LineColor = Color.FromArgb(48, 255, 255, 255);
-            area.AxisX.MajorGrid.LineDashStyle = ChartDashStyle.Dash;
-            area.AxisY.MajorGrid.LineDashStyle = ChartDashStyle.Dash;
-            chart.ChartAreas.Add(area);
-
-            var series = new Series("subjects")
-            {
-                ChartType = SeriesChartType.Column,
-                ChartArea = "main",
-                Color = Mustard,
-                BorderColor = MustardBorder,
-                BorderWidth = 1
-            };
-            chart.Series.Add(series);
-
+            ApplyPlotTheme(chart.Plot);
             return chart;
         }
 
-        private static void StyleAxis(Axis axis)
+        private static void ApplyPlotTheme(ScottPlot.Plot plot)
         {
-            axis.LabelStyle.ForeColor = TextMuted;
-            axis.LineColor = Color.FromArgb(100, 255, 255, 255);
-            axis.MajorTickMark.Enabled = false;
-            axis.MinorTickMark.Enabled = false;
+            var figureColor = ScottColor.FromColor(WorkspaceBg);
+            var dataColor = ScottColor.FromColor(ChartPlotBg);
+            var axisColor = ScottColor.FromColor(TextMuted);
+            var gridColor = ScottColor.FromColor(Color.FromArgb(48, 255, 255, 255));
+
+            plot.FigureBackground.Color = figureColor;
+            plot.DataBackground.Color = dataColor;
+            plot.Axes.Color(axisColor);
+            plot.Axes.FrameColor(ScottColor.FromColor(SubtleBorder));
+            plot.Axes.DefaultGrid.MajorLineColor = gridColor;
+            plot.Axes.DefaultGrid.MinorLineColor = gridColor;
+            plot.HideLegend();
         }
 
         private Control BuildHardestQuestionsPanel()
@@ -447,12 +415,12 @@ namespace QuizGenAI.Forms.Teacher
             UpdateSubjectMasteryChart(reports);
             if (_averageScoreChart != null)
             {
-                _averageScoreChart.Invalidate();
+                _averageScoreChart.Refresh();
             }
 
             if (_subjectMasteryChart != null)
             {
-                _subjectMasteryChart.Invalidate();
+                _subjectMasteryChart.Refresh();
             }
 
             var hardestFlow = Controls.Find("flowHardestQuestions", true).FirstOrDefault() as FlowLayoutPanel;
@@ -499,68 +467,56 @@ namespace QuizGenAI.Forms.Teacher
 
         private void UpdateAverageScoreChart(TeacherReportsDto reports)
         {
-            var series = _averageScoreChart.Series["trend"];
-            var area = _averageScoreChart.ChartAreas["main"];
-            series.Points.Clear();
-
             var labels = reports.ScoreTrendByMonth.Select(m => m.MonthLabel).ToList();
             var values = reports.ScoreTrendByMonth.Select(m => m.AverageScore).ToList();
+            var xs = Enumerable.Range(0, labels.Count).Select(i => (double)i).ToArray();
+            var ys = values.Select(v => v ?? 0D).ToArray();
+            var plot = _averageScoreChart.Plot;
+            plot.Clear();
+            ApplyPlotTheme(plot);
 
-            if (values.All(v => !v.HasValue))
+            if (labels.Count == 0)
             {
-                area.AxisY.Minimum = 60;
-                area.AxisY.Maximum = 90;
-                for (var i = 0; i < labels.Count; i++)
-                {
-                    series.Points.AddXY(i, 0);
-                    series.Points[i].AxisLabel = labels[i];
-                    series.Points[i].IsEmpty = true;
-                }
-
-                area.AxisX.Interval = 1;
+                _averageScoreChart.Refresh();
                 return;
             }
 
-            for (var i = 0; i < values.Count; i++)
-            {
-                series.Points.AddXY(i, values[i].HasValue ? values[i].Value : 0);
-                series.Points[i].AxisLabel = labels[i];
-                series.Points[i].IsEmpty = !values[i].HasValue;
-            }
-
-            var numericVals = values.Where(v => v.HasValue).Select(v => v.Value).ToList();
-            var minY = Math.Max(0, Math.Floor((numericVals.Min() - 8) / 4) * 4);
-            var maxY = Math.Min(100, Math.Ceiling((numericVals.Max() + 8) / 4) * 4);
-            if (maxY - minY < 16)
-            {
-                maxY = minY + 24;
-            }
-
-            area.AxisY.Minimum = minY;
-            area.AxisY.Maximum = maxY;
-            area.AxisX.Interval = 1;
+            var scatter = plot.Add.ScatterLine(xs, ys);
+            scatter.Color = ScottColor.FromColor(AccentLine);
+            plot.Axes.Bottom.SetTicks(xs, labels.ToArray());
+            plot.Axes.Margins(0.08, 0.12, 0.12, 0.18);
+            plot.Axes.Left.Label.Text = "Average %";
+            _averageScoreChart.Refresh();
         }
 
         private void UpdateSubjectMasteryChart(TeacherReportsDto reports)
         {
-            var series = _subjectMasteryChart.Series["subjects"];
-            var area = _subjectMasteryChart.ChartAreas["main"];
-            series.Points.Clear();
+            var ordered = reports.SubjectPerformance.OrderBy(s => s.AverageScore).ToList();
+            var values = ordered.Select(s => s.AverageScore).ToArray();
+            var positions = Enumerable.Range(0, ordered.Count).Select(i => (double)i).ToArray();
+            var labels = ordered.Select(s => s.SubjectName).ToArray();
+            var plot = _subjectMasteryChart.Plot;
+            plot.Clear();
+            ApplyPlotTheme(plot);
 
-            if (reports.SubjectPerformance.Count == 0)
+            if (ordered.Count == 0)
             {
+                _subjectMasteryChart.Refresh();
                 return;
             }
 
-            var ordered = reports.SubjectPerformance.OrderBy(s => s.AverageScore).ToList();
-            foreach (var s in ordered)
+            var bars = plot.Add.Bars(positions, values);
+            foreach (var bar in bars.Bars)
             {
-                series.Points.AddXY(s.SubjectName, s.AverageScore);
+                bar.FillColor = ScottColor.FromColor(Mustard);
+                bar.LineColor = ScottColor.FromColor(MustardBorder);
+                bar.LineWidth = 1;
             }
-
-            area.AxisY.Minimum = 0;
-            area.AxisY.Maximum = 100;
-            area.AxisY.Interval = 25;
+            plot.Axes.Bottom.SetTicks(positions, labels);
+            plot.Axes.Bottom.TickLabelStyle.Rotation = -30;
+            plot.Axes.Margins(0.08, 0.12, 0, 0.18);
+            plot.Axes.Left.Label.Text = "Average %";
+            _subjectMasteryChart.Refresh();
         }
 
         private static void FitFlowCardWidths(FlowLayoutPanel flow, int minWidth)

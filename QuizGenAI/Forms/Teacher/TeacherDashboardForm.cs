@@ -20,7 +20,7 @@ namespace QuizGenAI.Forms.Teacher
         private Panel _topBar;
         private Panel _contentHost;
         private Label _lblGreeting;
-        private Form _hostedContentForm;
+        private Control _hostedContentView;
 
         private static readonly Color MainWorkspaceGreen = Color.FromArgb(11, 48, 34);
         private string _displayName = "Teacher";
@@ -266,7 +266,7 @@ namespace QuizGenAI.Forms.Teacher
                 case "reports":
                     _lblPageTitle.Text = "Reports";
                     _lblPageDescription.Text = "Review teacher analytics and reporting inside the same workspace.";
-                    RenderHostedForm(CreateHostedReportsView());
+                    RenderHostedControl(CreateHostedReportsView());
                     break;
 
                 case "logs":
@@ -285,7 +285,7 @@ namespace QuizGenAI.Forms.Teacher
 
         private void RenderDashboardView()
         {
-            ClearHostedContentForm();
+            ClearHostedContentView();
             _contentHost.Controls.Clear();
             var dashboard = _reportService.GetTeacherDashboard();
 
@@ -353,14 +353,14 @@ namespace QuizGenAI.Forms.Teacher
 
         private void RenderPlaceholderView(string title, string description, string[] bulletPoints)
         {
-            ClearHostedContentForm();
+            ClearHostedContentView();
             _contentHost.Controls.Clear();
             _contentHost.Controls.Add(CreateInsightPanel(title, description, bulletPoints, DockStyle.Top, 420));
         }
 
         private void RenderLogsView()
         {
-            ClearHostedContentForm();
+            ClearHostedContentView();
             _contentHost.Controls.Clear();
 
             var root = new TableLayoutPanel
@@ -455,36 +455,51 @@ namespace QuizGenAI.Forms.Teacher
 
         private void RenderHostedForm(Form form)
         {
-            ClearHostedContentForm();
+            ClearHostedContentView();
             _contentHost.Controls.Clear();
 
-            _hostedContentForm = form;
-            _hostedContentForm.TopLevel = false;
-            _hostedContentForm.FormBorderStyle = FormBorderStyle.None;
-            _hostedContentForm.Dock = DockStyle.Fill;
-            _hostedContentForm.StartPosition = FormStartPosition.Manual;
-            _hostedContentForm.Padding = new Padding(0);
+            _hostedContentView = form;
+            form.TopLevel = false;
+            form.FormBorderStyle = FormBorderStyle.None;
+            form.Dock = DockStyle.Fill;
+            form.StartPosition = FormStartPosition.Manual;
+            form.Padding = new Padding(0);
 
-            _contentHost.Controls.Add(_hostedContentForm);
-            _hostedContentForm.Show();
+            _contentHost.Controls.Add(_hostedContentView);
+            form.Show();
             _contentHost.PerformLayout();
-            _hostedContentForm.PerformLayout();
+            _hostedContentView.PerformLayout();
         }
 
-        private void ClearHostedContentForm()
+        private void RenderHostedControl(Control control)
         {
-            if (_hostedContentForm == null)
+            ClearHostedContentView();
+            _contentHost.Controls.Clear();
+
+            _hostedContentView = control;
+            _hostedContentView.Dock = DockStyle.Fill;
+            _hostedContentView.Margin = new Padding(0);
+            _hostedContentView.Padding = new Padding(0);
+
+            _contentHost.Controls.Add(_hostedContentView);
+            _contentHost.PerformLayout();
+            _hostedContentView.PerformLayout();
+        }
+
+        private void ClearHostedContentView()
+        {
+            if (_hostedContentView == null)
             {
                 return;
             }
 
-            if (_contentHost.Controls.Contains(_hostedContentForm))
+            if (_contentHost.Controls.Contains(_hostedContentView))
             {
-                _contentHost.Controls.Remove(_hostedContentForm);
+                _contentHost.Controls.Remove(_hostedContentView);
             }
 
-            _hostedContentForm.Dispose();
-            _hostedContentForm = null;
+            _hostedContentView.Dispose();
+            _hostedContentView = null;
         }
 
         private Panel CreateHeroPanel(string title, string description, string buttonText)
@@ -718,13 +733,12 @@ namespace QuizGenAI.Forms.Teacher
             };
         }
 
-        private Form CreateHostedReportsView()
+        private Control CreateHostedReportsView()
         {
             return new ReportsForm
             {
                 CurrentUserId = CurrentUserId,
-                DisplayName = DisplayName,
-                TopLevel = false
+                DisplayName = DisplayName
             };
         }
     }

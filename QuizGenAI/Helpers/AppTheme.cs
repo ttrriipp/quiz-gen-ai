@@ -83,14 +83,18 @@ namespace QuizGenAI.Helpers
 
         private static bool ShouldSkipTheming(Control control)
         {
-            if (control == null)
+            var current = control;
+            while (current != null)
             {
-                return false;
+                if (string.Equals(current.Tag as string, SkipCognitaThemeTag, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                current = current.Parent;
             }
 
-            var form = control.FindForm();
-            return form != null
-                && string.Equals(form.Tag as string, SkipCognitaThemeTag, StringComparison.Ordinal);
+            return false;
         }
 
         private static void ApplyToControl(Control control)

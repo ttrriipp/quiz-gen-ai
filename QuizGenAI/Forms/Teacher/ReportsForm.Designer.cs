@@ -20,7 +20,7 @@ namespace QuizGenAI.Forms.Teacher
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
+        #region Component Designer generated code
 
         /// <summary>
         /// Required method for Designer support - do not modify
@@ -30,8 +30,8 @@ namespace QuizGenAI.Forms.Teacher
         {
             this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Text = "ReportsForms";
+            this.Name = "ReportsForm";
+            this.Size = new System.Drawing.Size(800, 450);
         }
 
         #endregion
