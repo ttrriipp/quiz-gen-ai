@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
@@ -12,6 +13,16 @@ namespace QuizGenAI.Forms.Student
 {
     public partial class StudentQuizzesForm : Form
     {
+        private static readonly Color ReportsWorkspaceBg = Color.FromArgb(11, 48, 34);
+        private static readonly Color ReportsCardBg = Color.FromArgb(16, 58, 44);
+        private static readonly Color ReportsInnerBg = Color.FromArgb(12, 46, 36);
+        private static readonly Color ReportsBorder = Color.FromArgb(72, 255, 255, 255);
+        private static readonly Color ReportsTextPrimary = Color.White;
+        private static readonly Color ReportsTextMuted = Color.FromArgb(196, 210, 200);
+        private static readonly Color ReportsAccent = Color.FromArgb(168, 230, 198);
+        private static readonly Color ReportsMustard = Color.FromArgb(212, 175, 80);
+        private static readonly Color ReportsMustardBorder = Color.FromArgb(235, 205, 130);
+
         private readonly Dictionary<string, Guna2Button> _navButtons = new Dictionary<string, Guna2Button>();
         private readonly ExamService _examService = new ExamService();
         private readonly QuizService _quizService = new QuizService();
@@ -20,6 +31,7 @@ namespace QuizGenAI.Forms.Student
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _contentHost;
+        private Panel _topBar;
         private Label _lblGreeting;
         private string _displayName = "Student";
         private int _currentUserId;
@@ -170,7 +182,7 @@ namespace QuizGenAI.Forms.Student
             sidebar.Controls.Add(navPanel);
             sidebar.Controls.Add(branding);
 
-            var topBar = new Panel
+            _topBar = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 102,
@@ -196,8 +208,8 @@ namespace QuizGenAI.Forms.Student
                 ForeColor = Color.FromArgb(100, 116, 139)
             };
 
-            topBar.Controls.Add(_lblPageDescription);
-            topBar.Controls.Add(_lblPageTitle);
+            _topBar.Controls.Add(_lblPageDescription);
+            _topBar.Controls.Add(_lblPageTitle);
 
             _contentHost = new Panel
             {
@@ -208,7 +220,7 @@ namespace QuizGenAI.Forms.Student
             };
 
             Controls.Add(_contentHost);
-            Controls.Add(topBar);
+            Controls.Add(_topBar);
             Controls.Add(sidebar);
             ResumeLayout();
         }
@@ -260,14 +272,16 @@ namespace QuizGenAI.Forms.Student
 
             if (_activeSection == "results")
             {
+                _topBar.Visible = true;
                 _lblPageTitle.Text = "Results";
                 _lblPageDescription.Text = "Average score, history, and recent performance appear here.";
                 RenderResultsView();
                 return;
             }
 
-            _lblPageTitle.Text = "Quizzes";
-            _lblPageDescription.Text = "Students will browse available quizzes and launch timed exams from here.";
+            _topBar.Visible = false;
+            _lblPageTitle.Text = string.Empty;
+            _lblPageDescription.Text = string.Empty;
             RenderQuizLandingView();
         }
 
@@ -275,42 +289,18 @@ namespace QuizGenAI.Forms.Student
         {
             _contentHost.Controls.Clear();
             var quizzes = _quizService.GetStudentQuizList(_currentUserId);
-            var completedAttempts = quizzes.Sum(x => x.AttemptCount);
-            var bestScore = quizzes.Where(x => x.BestScore.HasValue).Select(x => x.BestScore.Value).DefaultIfEmpty().Max();
-            var availableNow = quizzes.Count(x => x.CanStart);
 
             var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 3
+                RowCount = 2
             };
 
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 152F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 158F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-            root.Controls.Add(CreateHeroPanel(quizzes.Count), 0, 0);
-
-            var statRow = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(0, 18, 0, 18)
-            };
-
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
-
-            statRow.Controls.Add(CreateMetricCard("Available Now", availableNow.ToString(), "Only quizzes inside their publish window can be started."), 0, 0);
-            statRow.Controls.Add(CreateMetricCard("Attempt History", completedAttempts.ToString(), "This counts prior attempts already recorded for this student."), 1, 0);
-            statRow.Controls.Add(CreateMetricCard("Best Score", bestScore > 0 ? string.Format("{0:0.#}%", bestScore) : "No result yet", "This updates as soon as scored attempts are recorded."), 2, 0);
-
-            root.Controls.Add(statRow, 0, 1);
-
-            root.Controls.Add(CreateQuizBrowserPanel(quizzes), 0, 2);
+            root.Controls.Add(CreateQuizLandingHeroPanel(), 0, 0);
+            root.Controls.Add(CreateQuizBrowserPanel(quizzes), 0, 1);
             _contentHost.Controls.Add(root);
         }
 
@@ -635,89 +625,47 @@ namespace QuizGenAI.Forms.Student
             }
         }
 
-        private Panel CreateHeroPanel(int quizCount)
-        {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(24, 22, 24, 22);
-
-            var lblTitle = new Label
-            {
-                AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 36,
-                Font = new Font("Segoe UI Semibold", 21F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = "Ready for your next quiz"
-            };
-
-            var lblDescription = new Label
-            {
-                AutoSize = false,
-                Dock = DockStyle.Top,
-                Height = 52,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = string.Format("{0} published quizzes are visible here. Start buttons are now gated by publish windows, while the full timed exam flow is the next step.", quizCount)
-            };
-
-            panel.Controls.Add(lblDescription);
-            panel.Controls.Add(lblTitle);
-            return panel;
-        }
-
         private Panel CreateQuizBrowserPanel(IList<StudentQuizListItemDto> quizzes)
         {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(20, 18, 20, 20);
-
-            var lblTitle = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 30,
-                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = "Published quizzes"
-            };
-
-            var lblDescription = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 24,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Text = "Students can only see published quizzes. Cards show whether a quiz is open, upcoming, or already closed."
-            };
-
-            var flow = new FlowLayoutPanel
+            var panel = new Panel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
+                BackColor = Color.Transparent
+            };
+
+            var cardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
                 AutoScroll = true,
-                Padding = new Padding(0, 8, 0, 0)
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                Padding = new Padding(0, 4, 0, 0),
+                Margin = new Padding(0),
+                BackColor = Color.Transparent,
+                AutoSize = false
             };
 
             if (quizzes.Count == 0)
             {
-                flow.Controls.Add(CreateEmptyStateCard());
+                var empty = CreateQuizEmptyStateCard();
+                empty.Margin = new Padding(0, 0, 18, 18);
+                cardsHost.Controls.Add(empty);
             }
             else
             {
                 foreach (var quiz in quizzes)
                 {
-                    flow.Controls.Add(CreateQuizCard(quiz));
+                    cardsHost.Controls.Add(CreateQuizCard(quiz));
                 }
             }
 
-            panel.Controls.Add(flow);
-            panel.Controls.Add(lblDescription);
-            panel.Controls.Add(lblTitle);
+            panel.Controls.Add(cardsHost);
             return panel;
         }
 
-        private Control CreateEmptyStateCard()
+        private Control CreateQuizEmptyStateCard()
         {
-            return CreateEmptyStateCard("No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.");
+            return CreateQuizEmptyStateCard("No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.");
         }
 
         private Control CreateEmptyStateCard(string message)
@@ -744,106 +692,134 @@ namespace QuizGenAI.Forms.Student
             return panel;
         }
 
-        private Control CreateQuizCard(StudentQuizListItemDto quiz)
+        private Control CreateQuizEmptyStateCard(string message)
         {
             var panel = new Panel
             {
-                Width = 930,
-                Height = 152,
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Margin = new Padding(0, 0, 0, 14),
-                Padding = new Padding(18, 18, 18, 18)
+                Width = 432,
+                Height = 120,
+                BackColor = ReportsCardBg,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0, 0, 0, 18),
+                Padding = new Padding(24, 22, 24, 22)
             };
+            panel.Paint += RoundedInsetRow_Paint;
 
-            var actionPanel = new Panel
+            panel.Controls.Add(new Label
             {
-                Dock = DockStyle.Right,
-                Width = 190
-            };
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = message,
+                TextAlign = ContentAlignment.MiddleLeft
+            });
 
-            var btnStart = new Guna2Button
+            return panel;
+        }
+
+        private Control CreateQuizCard(StudentQuizListItemDto quiz)
+        {
+            const int cardWidth = 432;
+            const int paddingX = 22;
+            const int contentWidth = cardWidth - (paddingX * 2);
+
+            var panel = new Panel
             {
-                Width = 150,
-                Height = 42,
-                FillColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(203, 213, 225),
-                ForeColor = quiz.CanStart ? Color.White : Color.FromArgb(71, 85, 105),
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
-                Cursor = Cursors.Hand,
-                Enabled = true,
-                Top = 12,
-                Left = 18,
-                Tag = quiz
+                Width = cardWidth,
+                Height = 228,
+                BackColor = ReportsCardBg,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0, 0, 18, 18),
+                Padding = new Padding(22, 22, 22, 20)
             };
-            btnStart.BorderRadius = 9;
-            btnStart.Click += StartQuiz_Click;
+            panel.Paint += RoundedInsetRow_Paint;
 
-            var lblAttemptInfo = new Label
-            {
-                AutoSize = false,
-                Width = 160,
-                Height = 48,
-                Left = 18,
-                Top = 64,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = quiz.HasCompletedAttempt
-                    ? string.Format("Attempts: {0}\r\nBest score: {1:0.#}%", quiz.AttemptCount, quiz.BestScore.GetValueOrDefault())
-                    : string.Format("Attempts: {0}\r\nBest score: Not graded yet", quiz.AttemptCount)
-            };
+            var subjectPill = CreateQuizMetaPill(quiz.SubjectName, false);
+            subjectPill.Location = new Point(paddingX, 16);
 
-            actionPanel.Controls.Add(lblAttemptInfo);
-            actionPanel.Controls.Add(btnStart);
-
-            var body = new Panel
-            {
-                Dock = DockStyle.Fill
-            };
+            var difficultyPill = CreateQuizMetaPill(quiz.Difficulty.ToString(), true);
+            difficultyPill.Location = new Point(cardWidth - paddingX - difficultyPill.Width, 16);
 
             var lblTitle = new Label
             {
-                Dock = DockStyle.Top,
-                Height = 30,
+                AutoSize = false,
+                Location = new Point(paddingX, 62),
+                Width = contentWidth,
+                Height = 36,
                 Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = quiz.Title
-            };
-
-            var lblMeta = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 24,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Text = string.Format("{0} | {1} | {2} mins | {3} questions", quiz.SubjectName, quiz.Difficulty, quiz.DurationMinutes, quiz.QuestionCount)
+                ForeColor = ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = quiz.Title,
+                AutoEllipsis = true
             };
 
             var lblTopic = new Label
             {
-                Dock = DockStyle.Top,
+                AutoSize = false,
+                Location = new Point(paddingX, 102),
+                Width = contentWidth,
                 Height = 24,
+                Font = new Font("Segoe UI", 10.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = string.IsNullOrWhiteSpace(quiz.Topic) ? "No topic provided" : quiz.Topic,
+                AutoEllipsis = true
+            };
+
+            var lblMeta = new Label
+            {
+                AutoSize = false,
+                Location = new Point(paddingX, 140),
+                Width = contentWidth,
+                Height = 22,
                 Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = string.Format("Topic: {0}", quiz.Topic)
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = string.Format("{0} question{1}  |  {2} min", quiz.QuestionCount, quiz.QuestionCount == 1 ? string.Empty : "s", quiz.DurationMinutes)
             };
 
             var lblAvailability = new Label
             {
-                Dock = DockStyle.Top,
-                Height = 42,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = quiz.CanStart ? Color.FromArgb(15, 118, 110) : Color.FromArgb(185, 28, 28),
-                Text = quiz.AvailabilityLabel
+                AutoSize = false,
+                Location = new Point(paddingX, 164),
+                Width = contentWidth,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = quiz.CanStart ? ReportsAccent : ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = quiz.AvailabilityLabel,
+                AutoEllipsis = true
             };
 
-            body.Controls.Add(lblAvailability);
-            body.Controls.Add(lblTopic);
-            body.Controls.Add(lblMeta);
-            body.Controls.Add(lblTitle);
+            var btnStart = new Guna2Button
+            {
+                Location = new Point(paddingX, 186),
+                Width = contentWidth,
+                Height = 34,
+                FillColor = quiz.CanStart ? ReportsMustard : ReportsInnerBg,
+                ForeColor = quiz.CanStart ? ReportsWorkspaceBg : ReportsTextMuted,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
+                Cursor = Cursors.Hand,
+                Enabled = true,
+                Tag = quiz
+            };
+            btnStart.BorderRadius = 10;
+            btnStart.BorderThickness = 1;
+            btnStart.BorderColor = quiz.CanStart ? ReportsMustardBorder : ReportsBorder;
+            btnStart.DisabledState.FillColor = btnStart.FillColor;
+            btnStart.DisabledState.ForeColor = btnStart.ForeColor;
+            btnStart.DisabledState.BorderColor = btnStart.BorderColor;
+            btnStart.Click += StartQuiz_Click;
 
-            panel.Controls.Add(body);
-            panel.Controls.Add(actionPanel);
+            panel.Controls.Add(btnStart);
+            panel.Controls.Add(lblAvailability);
+            panel.Controls.Add(lblMeta);
+            panel.Controls.Add(lblTopic);
+            panel.Controls.Add(lblTitle);
+            panel.Controls.Add(difficultyPill);
+            panel.Controls.Add(subjectPill);
             return panel;
         }
 
@@ -928,6 +904,52 @@ namespace QuizGenAI.Forms.Student
             return panel;
         }
 
+        private Panel CreateQuizLandingHeroPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 0),
+                Margin = new Padding(0)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 40,
+                Font = new Font("Segoe UI", 12.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = "Pick a quiz to start. Your progress is saved automatically."
+            });
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 64,
+                Font = new Font("Segoe UI Semibold", 30F, FontStyle.Bold),
+                ForeColor = ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = "Ready when you are."
+            });
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 28,
+                Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
+                ForeColor = ReportsAccent,
+                BackColor = Color.Transparent,
+                Text = "AVAILABLE QUIZZES"
+            });
+
+            return panel;
+        }
+
         private Panel CreateInsightPanel(string title, string description, string[] bulletPoints)
         {
             var panel = CreateSurfacePanel();
@@ -977,6 +999,147 @@ namespace QuizGenAI.Forms.Student
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0)
             };
+        }
+
+        private static Panel CreateReportStyleSurfacePanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ReportsCardBg,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0)
+            };
+            panel.Paint += SurfacePanel_PaintRoundedBorder;
+            return panel;
+        }
+
+        private static Control CreateAvailabilityPillPanel(string text, bool canStart)
+        {
+            const int pillHeight = 28;
+            var font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            var width = Math.Max(
+                120,
+                Math.Min(
+                    360,
+                    TextRenderer.MeasureText(text ?? string.Empty, font, new Size(short.MaxValue, pillHeight), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 24));
+
+            var backColor = canStart ? ReportsMustard : ReportsInnerBg;
+            var foreColor = canStart ? ReportsWorkspaceBg : ReportsTextPrimary;
+            var panel = new Panel
+            {
+                Size = new Size(width, pillHeight),
+                BackColor = backColor,
+                Margin = new Padding(0)
+            };
+            panel.Paint += PillBorder_Paint;
+
+            panel.Controls.Add(new Label
+            {
+                Bounds = new Rectangle(0, 0, width, pillHeight),
+                Font = font,
+                ForeColor = foreColor,
+                BackColor = Color.Transparent,
+                Text = text,
+                TextAlign = ContentAlignment.MiddleCenter,
+                AutoSize = false,
+                UseCompatibleTextRendering = true
+            });
+
+            return panel;
+        }
+
+        private static Panel CreateQuizMetaPill(string text, bool rightAligned)
+        {
+            var label = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = rightAligned ? ReportsWorkspaceBg : ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = string.IsNullOrWhiteSpace(text) ? "General" : text,
+                TextAlign = ContentAlignment.MiddleCenter,
+                UseCompatibleTextRendering = true
+            };
+
+            var size = TextRenderer.MeasureText(label.Text, label.Font, new Size(short.MaxValue, 30), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+            var panel = new Panel
+            {
+                Width = Math.Max(92, Math.Min(180, size.Width + 28)),
+                Height = 32,
+                BackColor = rightAligned ? ReportsMustard : ReportsInnerBg,
+                Margin = new Padding(0)
+            };
+            panel.Paint += PillBorder_Paint;
+
+            label.Dock = DockStyle.Fill;
+            panel.Controls.Add(label);
+            return panel;
+        }
+
+        private static void PillBorder_Paint(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int radius = 10;
+            using (var path = BuildRoundedPath(rect, radius))
+            using (var pen = new Pen(ReportsBorder, 1))
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.DrawPath(pen, path);
+            }
+        }
+
+        private static void RoundedInsetRow_Paint(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int radius = 10;
+            using (var path = BuildRoundedPath(rect, radius))
+            using (var pen = new Pen(ReportsBorder, 1))
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.DrawPath(pen, path);
+            }
+        }
+
+        private static void SurfacePanel_PaintRoundedBorder(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null || panel.Width <= 1 || panel.Height <= 1)
+            {
+                return;
+            }
+
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+            const int radius = 14;
+            using (var path = BuildRoundedPath(rect, radius))
+            using (var pen = new Pen(ReportsBorder, 1))
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.DrawPath(pen, path);
+            }
+        }
+
+        private static GraphicsPath BuildRoundedPath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+            path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+            path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         private static string BuildBulletList(IEnumerable<string> bulletPoints)
