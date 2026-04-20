@@ -988,7 +988,7 @@ namespace QuizGenAI.Forms.Teacher
             _contentHost.Controls.Add(CreateInsightPanel(title, description, bulletPoints, DockStyle.Top, 420));
         }
 
-        private void RenderLogsView()
+        private void RenderLogsView(string selectedLogFile = null)
         {
             ClearHostedContentView();
             _contentHost.Controls.Clear();
@@ -997,10 +997,12 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Color.Transparent
+                RowCount = 3,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 0)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 88F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 112F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 102F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var logDirectory = Path.Combine(
@@ -1013,10 +1015,13 @@ namespace QuizGenAI.Forms.Teacher
                     .OrderByDescending(File.GetLastWriteTimeUtc)
                     .ToList()
                 : new List<string>();
+            var activeLogFile = !string.IsNullOrWhiteSpace(selectedLogFile) && logFiles.Contains(selectedLogFile)
+                ? selectedLogFile
+                : logFiles.FirstOrDefault();
 
-            var summaryPanel = CreateSurfacePanel();
+            var summaryPanel = CreateDashboardCardPanel();
             summaryPanel.Dock = DockStyle.Fill;
-            summaryPanel.Padding = new Padding(22, 18, 22, 18);
+            summaryPanel.Padding = new Padding(24, 18, 24, 18);
 
             var summaryLayout = new TableLayoutPanel
             {
@@ -1025,43 +1030,142 @@ namespace QuizGenAI.Forms.Teacher
                 RowCount = 1
             };
             summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126F));
+            summaryLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 148F));
 
             var btnRefresh = new Guna2Button
             {
                 Anchor = AnchorStyles.Right,
-                Width = 110,
-                Height = 34,
+                Width = 122,
+                Height = 38,
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = "Refresh",
                 Cursor = Cursors.Hand
             };
-            btnRefresh.BorderRadius = 9;
+            btnRefresh.BorderRadius = 10;
             btnRefresh.FillColor = Color.FromArgb(15, 118, 110);
             btnRefresh.Click += delegate { RenderLogsView(); };
+
+            var summaryTextHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            var lblSummaryTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = "Runtime Logs"
+            };
 
             var lblSummary = new Label
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(75, 85, 99),
-                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = DashboardMuted,
+                TextAlign = ContentAlignment.TopLeft,
                 Text = logFiles.Count == 0
                     ? "No log files found yet. Trigger a few actions, then refresh this view."
                     : string.Format(
-                        "{0} log file(s) found. Showing the latest entries from {1}.",
+                        "{0} log file(s) found in {1}. Select a file to inspect recent entries.",
                         logFiles.Count,
-                        Path.GetFileName(logFiles.First()))
+                        "LocalAppData\\QuizGenAI\\Logs")
+            };
+            summaryTextHost.Controls.Add(lblSummary);
+            summaryTextHost.Controls.Add(lblSummaryTitle);
+
+            var metricsPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            metricsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333F));
+            metricsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333F));
+            metricsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333F));
+            metricsPanel.Controls.Add(CreateLogMetricCard(
+                "Log Files",
+                logFiles.Count.ToString(),
+                logFiles.Count == 0 ? "Waiting for the first entry" : "Files available to inspect"), 0, 0);
+            metricsPanel.Controls.Add(CreateLogMetricCard(
+                "Latest Update",
+                activeLogFile == null ? "N/A" : File.GetLastWriteTime(activeLogFile).ToString("MMM dd"),
+                activeLogFile == null ? "No active file selected" : File.GetLastWriteTime(activeLogFile).ToString("hh:mm tt")), 1, 0);
+            metricsPanel.Controls.Add(CreateLogMetricCard(
+                "Storage",
+                FormatFileSize(logFiles.Aggregate(0L, (total, file) => total + GetFileSizeSafe(file))),
+                activeLogFile == null ? "No active file selected" : Path.GetFileName(activeLogFile)), 2, 0);
+
+            var contentLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320F));
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            var filesPanel = CreateDashboardCardPanel();
+            filesPanel.Dock = DockStyle.Fill;
+            filesPanel.Padding = new Padding(16);
+
+            var filesLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent
+            };
+            filesLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54F));
+            filesLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            filesLayout.Controls.Add(CreateLogSectionHeader(
+                "Available Files",
+                logFiles.Count == 0 ? "No log files discovered yet." : "Newest files appear first."), 0, 0);
+
+            var filesList = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 0)
             };
 
-            summaryLayout.Controls.Add(lblSummary, 0, 0);
-            summaryLayout.Controls.Add(btnRefresh, 1, 0);
-            summaryPanel.Controls.Add(summaryLayout);
+            if (logFiles.Count == 0)
+            {
+                filesList.Controls.Add(CreateEmptyStateLabel("No logs yet. Run a few teacher or student actions, then refresh."));
+            }
+            else
+            {
+                foreach (var file in logFiles)
+                {
+                    filesList.Controls.Add(CreateLogFileCard(file, file == activeLogFile));
+                }
+            }
 
-            var viewerPanel = CreateSurfacePanel();
+            filesLayout.Controls.Add(filesList, 0, 1);
+            filesPanel.Controls.Add(filesLayout);
+
+            var viewerPanel = CreateDashboardCardPanel();
             viewerPanel.Dock = DockStyle.Fill;
             viewerPanel.Padding = new Padding(0);
+
+            var viewerLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent
+            };
+            viewerLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
+            viewerLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            viewerLayout.Controls.Add(CreateLogPreviewHeader(activeLogFile), 0, 0);
 
             var txtLogs = new TextBox
             {
@@ -1071,15 +1175,25 @@ namespace QuizGenAI.Forms.Teacher
                 ScrollBars = ScrollBars.Both,
                 WordWrap = false,
                 BorderStyle = BorderStyle.None,
-                BackColor = Color.White,
-                Font = new Font("Consolas", 9.5F),
-                Text = BuildLogPreview(logFiles)
+                BackColor = Color.FromArgb(6, 24, 17),
+                ForeColor = Color.FromArgb(231, 245, 236),
+                Font = new Font("Consolas", 10F),
+                Margin = new Padding(18, 0, 18, 18),
+                Text = BuildLogPreview(activeLogFile)
             };
+            viewerLayout.Controls.Add(txtLogs, 0, 1);
+            viewerPanel.Controls.Add(viewerLayout);
 
-            viewerPanel.Controls.Add(txtLogs);
+            contentLayout.Controls.Add(filesPanel, 0, 0);
+            contentLayout.Controls.Add(viewerPanel, 1, 0);
+
+            summaryLayout.Controls.Add(summaryTextHost, 0, 0);
+            summaryLayout.Controls.Add(btnRefresh, 1, 0);
+            summaryPanel.Controls.Add(summaryLayout);
 
             root.Controls.Add(summaryPanel, 0, 0);
-            root.Controls.Add(viewerPanel, 0, 1);
+            root.Controls.Add(metricsPanel, 0, 1);
+            root.Controls.Add(contentLayout, 0, 2);
             _contentHost.Controls.Add(root);
         }
 
@@ -1295,19 +1409,219 @@ namespace QuizGenAI.Forms.Teacher
             return "• " + string.Join(Environment.NewLine + "• ", bulletPoints);
         }
 
-        private static string BuildLogPreview(List<string> logFiles)
+        private Control CreateLogFileCard(string filePath, bool isSelected)
         {
-            if (logFiles == null || logFiles.Count == 0)
+            var card = new Panel
+            {
+                Width = 270,
+                Height = 82,
+                Margin = new Padding(0, 0, 0, 12),
+                BackColor = isSelected ? DashboardCardStrong : Color.FromArgb(17, 76, 55),
+                Cursor = Cursors.Hand,
+                Padding = new Padding(18, 14, 18, 12)
+            };
+            card.Paint += DashboardCardPanel_Paint;
+
+            var lblMeta = new Label
+            {
+                Dock = DockStyle.Bottom,
+                Height = 24,
+                BackColor = Color.Transparent,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = isSelected ? Color.FromArgb(226, 238, 231) : DashboardMuted,
+                Text = string.Format(
+                    "{0}  •  {1}",
+                    File.GetLastWriteTime(filePath).ToString("MMM dd, yyyy hh:mm tt"),
+                    FormatFileSize(GetFileSizeSafe(filePath)))
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = Path.GetFileName(filePath)
+            };
+
+            EventHandler openSelectedLog = delegate { RenderLogsView(filePath); };
+            card.Click += openSelectedLog;
+            lblTitle.Click += openSelectedLog;
+            lblMeta.Click += openSelectedLog;
+
+            card.Controls.Add(lblMeta);
+            card.Controls.Add(lblTitle);
+            return card;
+        }
+
+        private Panel CreateLogMetricCard(string title, string value, string note)
+        {
+            var panel = CreateDashboardCardPanel();
+            panel.Margin = new Padding(0, 0, 16, 0);
+            panel.Padding = new Padding(18, 16, 18, 16);
+
+            var lblNote = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = DashboardMuted,
+                Text = note
+            };
+
+            var lblValue = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 32,
+                Font = new Font("Segoe UI Semibold", 18F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = value
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 20,
+                Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold),
+                ForeColor = DashboardAccent,
+                Text = title.ToUpperInvariant()
+            };
+
+            panel.Controls.Add(lblNote);
+            panel.Controls.Add(lblValue);
+            panel.Controls.Add(lblTitle);
+            return panel;
+        }
+
+        private static Panel CreateLogSectionHeader(string title, string description)
+        {
+            var host = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            var lblDescription = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = DashboardMuted,
+                Text = description
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = title
+            };
+
+            host.Controls.Add(lblDescription);
+            host.Controls.Add(lblTitle);
+            return host;
+        }
+
+        private static Control CreateEmptyStateLabel(string text)
+        {
+            return new Label
+            {
+                AutoSize = false,
+                Width = 270,
+                Height = 72,
+                Margin = new Padding(0, 0, 0, 12),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = DashboardCard,
+                Padding = new Padding(14, 16, 14, 14),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = DashboardMuted,
+                Text = text
+            };
+        }
+
+        private static Panel CreateLogPreviewHeader(string activeLogFile)
+        {
+            var host = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(18, 16, 18, 10)
+            };
+
+            var lblMeta = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = DashboardMuted,
+                Text = activeLogFile == null
+                    ? "Select a log file once entries are available."
+                    : string.Format(
+                        "Last modified {0}  •  {1}",
+                        File.GetLastWriteTime(activeLogFile).ToString("MMM dd, yyyy hh:mm tt"),
+                        FormatFileSize(GetFileSizeSafe(activeLogFile)))
+            };
+
+            var lblTitle = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
+                Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                Text = activeLogFile == null ? "Log Preview" : Path.GetFileName(activeLogFile)
+            };
+
+            host.Controls.Add(lblMeta);
+            host.Controls.Add(lblTitle);
+            return host;
+        }
+
+        private static long GetFileSizeSafe(string filePath)
+        {
+            try
+            {
+                return string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)
+                    ? 0L
+                    : new FileInfo(filePath).Length;
+            }
+            catch
+            {
+                return 0L;
+            }
+        }
+
+        private static string FormatFileSize(long bytes)
+        {
+            if (bytes <= 0)
+            {
+                return "0 B";
+            }
+
+            string[] suffixes = { "B", "KB", "MB", "GB" };
+            var index = 0;
+            double size = bytes;
+
+            while (size >= 1024 && index < suffixes.Length - 1)
+            {
+                size /= 1024;
+                index++;
+            }
+
+            return string.Format("{0:0.#} {1}", size, suffixes[index]);
+        }
+
+        private static string BuildLogPreview(string logFile)
+        {
+            if (string.IsNullOrWhiteSpace(logFile) || !File.Exists(logFile))
             {
                 return "No logs are available yet.";
             }
 
             try
             {
-                var latestFile = logFiles.First();
                 string[] lines;
 
-                using (var stream = new FileStream(latestFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var stream = new FileStream(logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                 using (var reader = new StreamReader(stream))
                 {
                     var content = reader.ReadToEnd();
@@ -1315,7 +1629,7 @@ namespace QuizGenAI.Forms.Teacher
                         .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
                 }
 
-                var tail = lines.Skip(Math.Max(0, lines.Length - 250));
+                var tail = lines.Skip(Math.Max(0, lines.Length - 320));
                 return string.Join(Environment.NewLine, tail);
             }
             catch (Exception ex)
