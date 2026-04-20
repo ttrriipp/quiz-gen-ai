@@ -8,6 +8,15 @@ namespace QuizGenAI.Forms.Student
 {
     public partial class StudentResultsForm : Form
     {
+        private static readonly Color HeroBg = Color.FromArgb(20, 99, 67);
+        private static readonly Color HeroAccent = Color.FromArgb(229, 190, 77);
+        private static readonly Color HeroBorder = Color.FromArgb(94, 255, 255, 255);
+        private static readonly Color SurfaceBorder = Color.FromArgb(223, 228, 219);
+        private static readonly Color TextPrimary = Color.FromArgb(15, 23, 42);
+        private static readonly Color TextMuted = Color.FromArgb(100, 116, 139);
+        private static readonly Color TextSoftOnHero = Color.FromArgb(217, 228, 221);
+        private static readonly Color RecommendationBg = Color.FromArgb(250, 251, 247);
+
         private readonly StudentAttemptSummaryDto _summary;
 
         public StudentResultsForm(StudentAttemptSummaryDto summary)
@@ -43,137 +52,165 @@ namespace QuizGenAI.Forms.Student
                 RowCount = 3,
                 Padding = new Padding(20)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 108F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 178F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 262F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 54F));
 
-            root.Controls.Add(BuildHeaderPanel(), 0, 0);
-            root.Controls.Add(BuildMetricRow(), 0, 1);
-            root.Controls.Add(BuildDetailsPanel(), 0, 2);
+            root.Controls.Add(BuildScoreHeroPanel(), 0, 0);
+            root.Controls.Add(BuildRecommendationPanel(), 0, 1);
+            root.Controls.Add(BuildActionPanel(), 0, 2);
 
             Controls.Add(root);
             ResumeLayout();
         }
 
-        private Control BuildHeaderPanel()
+        private Control BuildScoreHeroPanel()
         {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(22, 18, 22, 18);
-
-            var btnClose = new Button
+            var panel = new Panel
             {
-                Dock = DockStyle.Right,
-                Width = 138,
-                Height = 42,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(3, 105, 161),
+                Dock = DockStyle.Fill,
+                BackColor = HeroBg,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(28, 24, 28, 24),
+                Margin = new Padding(0, 0, 0, 18)
+            };
+
+            var card = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(16, 78, 56),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(20)
+            };
+
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 5,
+                BackColor = Color.Transparent
+            };
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var trophyHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            var trophyPanel = new Panel
+            {
+                Size = new Size(62, 62),
+                BackColor = HeroAccent
+            };
+            trophyPanel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Symbol", 22F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(22, 44, 35),
+                Text = "★",
+                TextAlign = ContentAlignment.MiddleCenter
+            });
+            trophyHost.Controls.Add(trophyPanel);
+            trophyHost.Resize += delegate
+            {
+                trophyPanel.Location = new Point(
+                    Math.Max(0, (trophyHost.ClientSize.Width - trophyPanel.Width) / 2),
+                    Math.Max(0, (trophyHost.ClientSize.Height - trophyPanel.Height) / 2));
+            };
+
+            var effortLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
+                ForeColor = HeroAccent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = GetEffortLabel()
+            };
+
+            var scoreLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 38F, FontStyle.Bold),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                Text = "View All Results",
-                Cursor = Cursors.Hand
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.Click += delegate
-            {
-                DialogResult = DialogResult.OK;
-                Close();
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = string.Format("{0:0.#}%", _summary.ScorePercentage)
             };
 
-            var body = new Panel
-            {
-                Dock = DockStyle.Fill
-            };
-
-            body.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 26,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = string.Format("{0} | {1}", _summary.SubjectName, _summary.Topic)
-            });
-
-            body.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 42,
-                Font = new Font("Segoe UI Semibold", 23F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = _summary.QuizTitle
-            });
-
-            panel.Controls.Add(btnClose);
-            panel.Controls.Add(body);
-            return panel;
-        }
-
-        private Control BuildMetricRow()
-        {
-            var grid = new TableLayoutPanel
+            var summaryLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(0, 16, 0, 16)
-            };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
-
-            grid.Controls.Add(CreateMetricCard("Score", string.Format("{0:0.#}%", _summary.ScorePercentage), "Computed immediately after submission."), 0, 0);
-            grid.Controls.Add(CreateMetricCard("Correct Answers", _summary.CorrectAnswers.ToString(), string.Format("Wrong: {0} | Unanswered: {1}", _summary.WrongAnswers, _summary.UnansweredQuestions)), 1, 0);
-            grid.Controls.Add(CreateMetricCard("Time Spent", _summary.TimeSpentDisplay, _summary.SubmittedAtDisplay), 2, 0);
-
-            return grid;
-        }
-
-        private Control BuildBodyPanel()
-        {
-            var grid = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1
-            };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
-
-            grid.Controls.Add(BuildDetailsPanel(), 0, 0);
-            grid.Controls.Add(BuildRecommendationPanel(), 1, 0);
-            return grid;
-        }
-
-        private Control BuildDetailsPanel()
-        {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(22, 20, 22, 20);
-
-            var lblBody = new Label
-            {
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(51, 65, 85),
+                Font = new Font("Segoe UI", 14F),
+                ForeColor = TextSoftOnHero,
+                TextAlign = ContentAlignment.MiddleCenter,
                 Text = string.Format(
-                    "Student: {0}\r\nQuestions answered: {1} of {2}\r\nCorrect: {3}\r\nWrong: {4}\r\nUnanswered: {5}\r\nSubmission time: {6}\r\nRecommendation source: {7}",
-                    _summary.StudentName,
-                    _summary.AnsweredQuestions,
-                    _summary.TotalQuestions,
+                    "{0} of {1} correct on {2}",
                     _summary.CorrectAnswers,
-                    _summary.WrongAnswers,
-                    _summary.UnansweredQuestions,
-                    _summary.SubmittedAtDisplay,
-                    string.IsNullOrWhiteSpace(_summary.RecommendationSourceLabel) ? "Not available" : _summary.RecommendationSourceLabel)
+                    _summary.TotalQuestions,
+                    _summary.QuizTitle)
             };
 
-            panel.Controls.Add(lblBody);
+            var metaLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10.5F),
+                ForeColor = TextSoftOnHero,
+                TextAlign = ContentAlignment.TopCenter,
+                Text = string.Format(
+                    "{0} | {1}\r\nTime spent: {2} | Submitted: {3}",
+                    _summary.SubjectName,
+                    _summary.Topic,
+                    _summary.TimeSpentDisplay,
+                    _summary.SubmittedAtDisplay)
+            };
+
+            layout.Controls.Add(trophyHost, 0, 0);
+            layout.Controls.Add(effortLabel, 0, 1);
+            layout.Controls.Add(scoreLabel, 0, 2);
+            layout.Controls.Add(summaryLabel, 0, 3);
+            layout.Controls.Add(metaLabel, 0, 4);
+
+            card.Controls.Add(layout);
+            panel.Controls.Add(card);
             return panel;
+        }
+
+        private string GetEffortLabel()
+        {
+            if (_summary.ScorePercentage >= 85)
+            {
+                return "EXCELLENT WORK";
+            }
+
+            if (_summary.ScorePercentage >= 60)
+            {
+                return "GOOD EFFORT";
+            }
+
+            return "KEEP PRACTICING";
         }
 
         private Control BuildRecommendationPanel()
         {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(22, 20, 22, 20);
-            panel.Margin = new Padding(18, 0, 0, 0);
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(22, 20, 22, 20),
+                Margin = new Padding(0, 0, 0, 18)
+            };
+
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 64,
+                BackColor = Color.Transparent
+            };
 
             var content = new FlowLayoutPanel
             {
@@ -181,29 +218,18 @@ namespace QuizGenAI.Forms.Student
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(0, 8, 0, 0)
+                Padding = new Padding(0, 8, 0, 0),
+                BackColor = RecommendationBg
             };
-
-            if (!string.IsNullOrWhiteSpace(_summary.WeakAreaSummary))
-            {
-                content.Controls.Add(new Label
-                {
-                    Width = 360,
-                    Height = 56,
-                    Font = new Font("Segoe UI", 9.5F),
-                    ForeColor = Color.FromArgb(71, 85, 105),
-                    Text = _summary.WeakAreaSummary
-                });
-            }
 
             if (_summary.Recommendations.Count == 0)
             {
                 content.Controls.Add(new Label
                 {
-                    Width = 360,
+                    Width = 840,
                     Height = 52,
                     Font = new Font("Segoe UI", 10F),
-                    ForeColor = Color.FromArgb(71, 85, 105),
+                    ForeColor = TextMuted,
                     Text = "No study recommendations are available for this attempt yet."
                 });
             }
@@ -215,16 +241,71 @@ namespace QuizGenAI.Forms.Student
                 }
             }
 
-            panel.Controls.Add(content);
-            panel.Controls.Add(new Label
+            headerPanel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
                 Height = 28,
-                Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = "Study Recommendations"
+                Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold),
+                ForeColor = TextPrimary,
+                Text = "AI Study Recommendations"
+            });
+            headerPanel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 26,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = TextMuted,
+                Text = string.Format(
+                    "Student: {0} | Answered: {1}/{2} | Source: {3}",
+                    _summary.StudentName,
+                    _summary.AnsweredQuestions,
+                    _summary.TotalQuestions,
+                    string.IsNullOrWhiteSpace(_summary.RecommendationSourceLabel) ? "Not available" : _summary.RecommendationSourceLabel)
             });
 
+            panel.Controls.Add(content);
+            panel.Controls.Add(headerPanel);
+            return panel;
+        }
+
+        private Control BuildActionPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                Padding = new Padding(0),
+                Margin = new Padding(0),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+
+            var btnAllResults = CreateActionButton("View All Results", Color.FromArgb(22, 88, 61), Color.White);
+            btnAllResults.Click += delegate
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            };
+
+            var btnBack = CreateActionButton("Back To Quizzes", Color.White, TextPrimary);
+            btnBack.FlatAppearance.BorderColor = SurfaceBorder;
+            btnBack.FlatAppearance.BorderSize = 1;
+            btnBack.Click += delegate
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            };
+
+            flow.Controls.Add(btnAllResults);
+            flow.Controls.Add(btnBack);
+            panel.Controls.Add(flow);
             return panel;
         }
 
@@ -232,20 +313,20 @@ namespace QuizGenAI.Forms.Student
         {
             var panel = new Panel
             {
-                Width = 360,
-                Height = 96,
-                BackColor = Color.FromArgb(248, 250, 252),
+                Width = 840,
+                Height = 88,
+                BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 0, 0, 12),
-                Padding = new Padding(14, 12, 14, 12)
+                Padding = new Padding(16, 12, 16, 12)
             };
 
             panel.Controls.Add(new Label
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = item.Description
+                ForeColor = TextMuted,
+                Text = string.Format("Focus: {0}", item.Description)
             });
 
             panel.Controls.Add(new Label
@@ -253,58 +334,29 @@ namespace QuizGenAI.Forms.Student
                 Dock = DockStyle.Top,
                 Height = 24,
                 Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
+                ForeColor = TextPrimary,
                 Text = item.Title
             });
 
             return panel;
         }
 
-        private static Panel CreateSurfacePanel()
+        private static Button CreateActionButton(string text, Color backColor, Color foreColor)
         {
-            return new Panel
+            var button = new Button
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Margin = new Padding(0)
+                Width = 154,
+                Height = 42,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = backColor,
+                ForeColor = foreColor,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = text,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(12, 0, 0, 0)
             };
-        }
-
-        private static Control CreateMetricCard(string title, string value, string note)
-        {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(20, 16, 20, 16);
-            panel.Margin = new Padding(0, 0, 18, 0);
-
-            panel.Controls.Add(new Label
-            {
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                AutoEllipsis = true,
-                Text = note
-            });
-
-            panel.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 50,
-                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = value
-            });
-
-            panel.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 28,
-                Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Text = title
-            });
-
-            return panel;
+            button.FlatAppearance.BorderSize = 0;
+            return button;
         }
     }
 }
