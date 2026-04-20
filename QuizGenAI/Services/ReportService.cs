@@ -142,6 +142,7 @@ namespace QuizGenAI.Services
                             CorrectAnswers = correctAnswers,
                             WrongAnswers = wrongAnswers,
                             UnansweredQuestions = Math.Max(0, totalQuestions - answeredQuestions),
+                            SubmittedAtLocal = x.SubmittedAt.HasValue ? (DateTime?)NormalizeStoredLocal(x.SubmittedAt.Value) : null,
                             SubmittedAtDisplay = x.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(x.SubmittedAt.Value) : "Pending",
                             TimeSpentDisplay = FormatDuration(x.TimeSpentSeconds)
                         };

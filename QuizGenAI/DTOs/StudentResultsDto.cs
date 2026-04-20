@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 
 namespace QuizGenAI.DTOs
 {
@@ -31,6 +32,7 @@ namespace QuizGenAI.DTOs
         public int CorrectAnswers { get; set; }
         public int WrongAnswers { get; set; }
         public int UnansweredQuestions { get; set; }
+        public DateTime? SubmittedAtLocal { get; set; }
         public string SubmittedAtDisplay { get; set; }
         public string TimeSpentDisplay { get; set; }
     }

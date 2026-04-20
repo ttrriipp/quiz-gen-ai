@@ -5,9 +5,11 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
+using ScottPlot.WinForms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Helpers;
 using QuizGenAI.Services;
+using ScottColor = ScottPlot.Color;
 
 namespace QuizGenAI.Forms.Student
 {
@@ -272,9 +274,9 @@ namespace QuizGenAI.Forms.Student
 
             if (_activeSection == "results")
             {
-                _topBar.Visible = true;
-                _lblPageTitle.Text = "Results";
-                _lblPageDescription.Text = "Average score, history, and recent performance appear here.";
+                _topBar.Visible = false;
+                _lblPageTitle.Text = string.Empty;
+                _lblPageDescription.Text = string.Empty;
                 RenderResultsView();
                 return;
             }
@@ -308,56 +310,362 @@ namespace QuizGenAI.Forms.Student
         {
             _contentHost.Controls.Clear();
             var results = _reportService.GetStudentResults(_currentUserId);
-            if (results.History.Count > 0)
-            {
-                try
-                {
-                    var latestRecommendationResult = _recommendationService.GetRecommendationsForAttempt(_currentUserId, results.History[0].AttemptId);
-                    results.LatestRecommendations = latestRecommendationResult.Recommendations;
-                    results.LatestWeakAreaSummary = latestRecommendationResult.WeakAreaSummary;
-                    results.RecommendationSourceLabel = latestRecommendationResult.SourceLabel;
-                    results.UsedFallbackRecommendations = latestRecommendationResult.UsedFallback;
-                }
-                catch
-                {
-                    results.LatestRecommendations.Clear();
-                    results.LatestWeakAreaSummary = "Recommendations are temporarily unavailable.";
-                    results.RecommendationSourceLabel = "Unavailable";
-                    results.UsedFallbackRecommendations = true;
-                }
-            }
 
             var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 3
+                RowCount = 4
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 152F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 112F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 122F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 236F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            root.Controls.Add(CreateResultsHeroPanel(results.StudentName), 0, 0);
+            root.Controls.Add(CreateResultsOverviewPanel(), 0, 0);
+            root.Controls.Add(CreateResultsMetricsRow(results), 0, 1);
+            root.Controls.Add(CreateResultsTrendPanel(results), 0, 2);
+            root.Controls.Add(CreateResultsTablePanel(results), 0, 3);
 
-            var statRow = new TableLayoutPanel
+            _contentHost.Controls.Add(root);
+        }
+
+        private Control CreateResultsOverviewPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 0)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 54,
+                Font = new Font("Segoe UI Semibold", 28F, FontStyle.Bold),
+                ForeColor = ReportsTextPrimary,
+                Text = "Your progress so far"
+            });
+
+            panel.Controls.Add(new Label
+            {
+                AutoSize = false,
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = ReportsAccent,
+                Text = "MY RESULTS"
+            });
+
+            return panel;
+        }
+
+        private Control CreateResultsMetricsRow(StudentResultsDto results)
+        {
+            var row = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
                 RowCount = 1,
-                Margin = new Padding(0, 18, 0, 18)
+                Margin = new Padding(0, 10, 0, 18),
+                BackColor = Color.Transparent
             };
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            statRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
-            statRow.Controls.Add(CreateMetricCard("Average Score", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.AverageScore) : "No result yet", "Average across submitted attempts."), 0, 0);
-            statRow.Controls.Add(CreateMetricCard("Quizzes Taken", results.QuizzesTaken.ToString(), "Submitted attempts recorded in your history."), 1, 0);
-            statRow.Controls.Add(CreateMetricCard("Best Score", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.BestScore) : "No result yet", "Highest score achieved so far."), 2, 0);
+            var bestAttempt = results.History.OrderByDescending(x => x.ScorePercentage).ThenByDescending(x => x.SubmittedAtLocal).FirstOrDefault();
+            row.Controls.Add(CreateResultsMetricCard("Average Score", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.AverageScore) : "No result yet", string.Format("{0} scored attempts", results.QuizzesTaken), false), 0, 0);
+            row.Controls.Add(CreateResultsMetricCard("Quizzes Taken", results.QuizzesTaken.ToString(), "Completed quizzes in your history", false), 1, 0);
+            row.Controls.Add(CreateResultsMetricCard("Best", results.QuizzesTaken > 0 ? string.Format("{0:0.#}%", results.BestScore) : "No result yet", bestAttempt != null ? bestAttempt.QuizTitle : "No attempts yet", true), 2, 0);
+            return row;
+        }
 
-            root.Controls.Add(statRow, 0, 1);
-            root.Controls.Add(CreateResultsHistoryPanel(results), 0, 2);
+        private Control CreateResultsMetricCard(string title, string value, string note, bool highlight)
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = highlight ? Color.FromArgb(24, 105, 72) : ReportsCardBg,
+                BorderStyle = BorderStyle.None,
+                Margin = highlight ? new Padding(18, 0, 0, 0) : new Padding(0, 0, 18, 0),
+                Padding = new Padding(18, 16, 18, 16)
+            };
+            panel.Paint += SurfacePanel_PaintRoundedBorder;
 
-            _contentHost.Controls.Add(root);
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = highlight ? Color.FromArgb(226, 232, 240) : ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = note
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 48,
+                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                ForeColor = ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = value
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = highlight ? ReportsAccent : ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = title.ToUpperInvariant()
+            });
+
+            return panel;
+        }
+
+        private Control CreateResultsTrendPanel(StudentResultsDto results)
+        {
+            var panel = CreateReportStyleSurfacePanel();
+            panel.Padding = new Padding(20, 18, 20, 18);
+
+            var chartPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ReportsInnerBg,
+                Padding = new Padding(14, 14, 14, 14)
+            };
+            chartPanel.Controls.Add(CreateStudentProgressPlot(results));
+
+            panel.Controls.Add(chartPanel);
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = "Progress over time"
+            });
+
+            return panel;
+        }
+
+        private Control CreateStudentProgressPlot(StudentResultsDto results)
+        {
+            var history = results.History
+                .Where(x => x.SubmittedAtLocal.HasValue)
+                .OrderBy(x => x.SubmittedAtLocal.Value)
+                .Take(8)
+                .ToList();
+
+            var chart = new FormsPlot
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ReportsInnerBg,
+                Margin = Padding.Empty
+            };
+
+            var plot = chart.Plot;
+            ApplyStudentResultsPlotTheme(plot);
+
+            if (history.Count == 0)
+            {
+                chart.Refresh();
+                return chart;
+            }
+
+            var xs = Enumerable.Range(0, history.Count).Select(i => (double)i).ToArray();
+            var ys = history.Select(x => x.ScorePercentage).ToArray();
+            var labels = history
+                .Select(x => x.SubmittedAtLocal.HasValue ? x.SubmittedAtLocal.Value.ToString("MMM d") : x.SubmittedAtDisplay)
+                .ToArray();
+
+            var scatter = plot.Add.ScatterLine(xs, ys);
+            scatter.Color = ScottColor.FromColor(ReportsAccent);
+            scatter.LineWidth = 3;
+            scatter.MarkerSize = 8;
+            scatter.MarkerFillColor = ScottColor.FromColor(ReportsMustard);
+            scatter.MarkerLineColor = ScottColor.FromColor(ReportsBorder);
+            scatter.MarkerLineWidth = 1;
+
+            plot.Axes.Bottom.SetTicks(xs, labels);
+            plot.Axes.Left.Min = 50;
+            plot.Axes.Left.Max = 100;
+            plot.Axes.Left.SetTicks(
+                new double[] { 50, 65, 80, 100 },
+                new[] { "50", "65", "80", "100" });
+            plot.Axes.Margins(0.05, 0.08, 0.08, 0.18);
+            chart.Refresh();
+            return chart;
+        }
+
+        private static void ApplyStudentResultsPlotTheme(ScottPlot.Plot plot)
+        {
+            var figureColor = ScottColor.FromColor(ReportsInnerBg);
+            var dataColor = ScottColor.FromColor(ReportsInnerBg);
+            var axisColor = ScottColor.FromColor(ReportsTextMuted);
+            var gridColor = ScottColor.FromColor(Color.FromArgb(48, 255, 255, 255));
+
+            plot.Clear();
+            plot.FigureBackground.Color = figureColor;
+            plot.DataBackground.Color = dataColor;
+            plot.Axes.Color(axisColor);
+            plot.Axes.FrameColor(ScottColor.FromColor(ReportsBorder));
+            plot.Axes.DefaultGrid.MajorLineColor = gridColor;
+            plot.Axes.DefaultGrid.MinorLineColor = gridColor;
+            plot.HideLegend();
+        }
+
+        private Control CreateResultsTablePanel(StudentResultsDto results)
+        {
+            var panel = CreateReportStyleSurfacePanel();
+            panel.Padding = new Padding(18, 16, 18, 16);
+
+            var content = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0),
+                BackColor = ReportsInnerBg
+            };
+
+            content.Controls.Add(CreateStudentResultsTableHeader());
+            if (results.History.Count == 0)
+            {
+                content.Controls.Add(CreateEmptyInfoCard("No submitted results yet. Complete a quiz and your history will appear here."));
+            }
+            else
+            {
+                foreach (var item in results.History)
+                {
+                    content.Controls.Add(CreateStudentResultsTableRow(item));
+                }
+            }
+
+            FitFlowCardWidths(content, 320);
+            panel.Controls.Add(content);
+            return panel;
+        }
+
+        private static Control CreateStudentResultsTableHeader()
+        {
+            const int padX = 12;
+            const int padY = 8;
+            var bar = new Panel
+            {
+                Width = 520,
+                Height = 40,
+                Margin = new Padding(0, 0, 0, 6),
+                BackColor = ReportsCardBg
+            };
+            bar.Paint += RoundedInsetRow_Paint;
+
+            var h1 = CreateHeaderCell("QUIZ");
+            var h2 = CreateHeaderCell("SUBJECT");
+            var h3 = CreateHeaderCell("DATE");
+            var h4 = CreateHeaderCell("SCORE");
+            bar.Controls.Add(h1);
+            bar.Controls.Add(h2);
+            bar.Controls.Add(h3);
+            bar.Controls.Add(h4);
+
+            EventHandler arrange = delegate
+            {
+                var innerW = bar.ClientSize.Width - padX * 2;
+                var innerH = bar.ClientSize.Height - padY * 2;
+                var c0 = (int)Math.Floor(innerW * 0.42);
+                var c1 = (int)Math.Floor(innerW * 0.22);
+                var c2 = (int)Math.Floor(innerW * 0.20);
+                var c3 = innerW - c0 - c1 - c2;
+                h1.SetBounds(padX, padY, c0, innerH);
+                h2.SetBounds(padX + c0, padY, c1, innerH);
+                h3.SetBounds(padX + c0 + c1, padY, c2, innerH);
+                h4.SetBounds(padX + c0 + c1 + c2, padY, c3, innerH);
+            };
+
+            bar.HandleCreated += arrange;
+            bar.Resize += arrange;
+            arrange(bar, EventArgs.Empty);
+            return bar;
+        }
+
+        private static Control CreateStudentResultsTableRow(StudentResultHistoryItemDto item)
+        {
+            const int padX = 12;
+            const int padY = 8;
+            var row = new Panel
+            {
+                Width = 520,
+                Height = 60,
+                Margin = new Padding(0, 0, 0, 0),
+                BackColor = ReportsInnerBg
+            };
+            row.Paint += SubmissionRowDivider_Paint;
+
+            var lblQuiz = new Label
+            {
+                AutoSize = false,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = ReportsTextPrimary,
+                BackColor = Color.Transparent,
+                Text = item.QuizTitle,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            };
+
+            var lblSubject = new Label
+            {
+                AutoSize = false,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = item.SubjectName,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            };
+
+            var lblDate = new Label
+            {
+                AutoSize = false,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = item.SubmittedAtLocal.HasValue ? item.SubmittedAtLocal.Value.ToString("MMM d") : item.SubmittedAtDisplay,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            };
+
+            var pill = CreateRatePillPanel(string.Format("{0:0.#}%", item.ScorePercentage), ScorePillBack(item.ScorePercentage), ScorePillFore(item.ScorePercentage));
+            row.Controls.Add(lblQuiz);
+            row.Controls.Add(lblSubject);
+            row.Controls.Add(lblDate);
+            row.Controls.Add(pill);
+
+            EventHandler arrange = delegate
+            {
+                var innerW = row.ClientSize.Width - padX * 2;
+                var innerH = row.ClientSize.Height - padY * 2;
+                var c0 = (int)Math.Floor(innerW * 0.42);
+                var c1 = (int)Math.Floor(innerW * 0.22);
+                var c2 = (int)Math.Floor(innerW * 0.20);
+                var c3 = innerW - c0 - c1 - c2;
+                lblQuiz.SetBounds(padX, padY, c0, innerH);
+                lblSubject.SetBounds(padX + c0, padY, c1, innerH);
+                lblDate.SetBounds(padX + c0 + c1, padY, c2, innerH);
+                var pillY = padY + Math.Max(0, (innerH - pill.Height) / 2);
+                pill.SetBounds(padX + c0 + c1 + c2 + Math.Max(0, c3 - pill.Width), pillY, pill.Width, pill.Height);
+            };
+
+            row.HandleCreated += arrange;
+            row.Resize += arrange;
+            arrange(row, EventArgs.Empty);
+            return row;
         }
 
         private Panel CreateResultsHeroPanel(string studentName)
@@ -1075,6 +1383,154 @@ namespace QuizGenAI.Forms.Student
             label.Dock = DockStyle.Fill;
             panel.Controls.Add(label);
             return panel;
+        }
+
+        private static void FitFlowCardWidths(FlowLayoutPanel flow, int minWidth)
+        {
+            if (flow == null)
+            {
+                return;
+            }
+
+            Action apply = delegate
+            {
+                var targetWidth = Math.Max(minWidth, flow.ClientSize.Width - 8);
+                foreach (Control control in flow.Controls)
+                {
+                    control.Width = targetWidth;
+                }
+            };
+
+            apply();
+            flow.Resize -= Flow_ResizeFitCards;
+            flow.Resize += Flow_ResizeFitCards;
+        }
+
+        private static void Flow_ResizeFitCards(object sender, EventArgs e)
+        {
+            var flow = sender as FlowLayoutPanel;
+            if (flow == null)
+            {
+                return;
+            }
+
+            var targetWidth = Math.Max(280, flow.ClientSize.Width - 8);
+            foreach (Control control in flow.Controls)
+            {
+                control.Width = targetWidth;
+            }
+        }
+
+        private static Control CreateEmptyInfoCard(string message)
+        {
+            var panel = new Panel
+            {
+                Width = 470,
+                Height = 84,
+                BackColor = ReportsInnerBg,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0, 0, 0, 12),
+                Padding = new Padding(14, 12, 14, 12)
+            };
+            panel.Paint += RoundedInsetRow_Paint;
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = message
+            });
+
+            return panel;
+        }
+
+        private static Label CreateHeaderCell(string text)
+        {
+            return new Label
+            {
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = text,
+                UseCompatibleTextRendering = true
+            };
+        }
+
+        private static Control CreateRatePillPanel(string text, Color back, Color fore)
+        {
+            const int pillH = 28;
+            var font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            var textW = TextRenderer.MeasureText(text, font, new Size(short.MaxValue, pillH), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width;
+            var w = Math.Max(88, Math.Min(220, textW + 24));
+            var pill = new Panel
+            {
+                Size = new Size(w, pillH),
+                BackColor = back,
+                Margin = new Padding(0)
+            };
+            pill.Paint += PillBorder_Paint;
+
+            pill.Controls.Add(new Label
+            {
+                Bounds = new Rectangle(0, 0, w, pillH),
+                Font = font,
+                ForeColor = fore,
+                BackColor = Color.Transparent,
+                Text = text,
+                TextAlign = ContentAlignment.MiddleCenter,
+                UseCompatibleTextRendering = true,
+                AutoSize = false
+            });
+
+            return pill;
+        }
+
+        private static Color ScorePillBack(double score)
+        {
+            if (score < 60)
+            {
+                return ReportsWorkspaceBg;
+            }
+
+            if (score < 85)
+            {
+                return ReportsMustard;
+            }
+
+            return ReportsCardBg;
+        }
+
+        private static Color ScorePillFore(double score)
+        {
+            if (score < 60)
+            {
+                return ReportsTextPrimary;
+            }
+
+            if (score < 85)
+            {
+                return ReportsWorkspaceBg;
+            }
+
+            return ReportsTextPrimary;
+        }
+
+        private static void SubmissionRowDivider_Paint(object sender, PaintEventArgs e)
+        {
+            var panel = sender as Panel;
+            if (panel == null)
+            {
+                return;
+            }
+
+            using (var pen = new Pen(ReportsBorder, 1))
+            {
+                e.Graphics.DrawLine(pen, 12, panel.Height - 1, panel.Width - 12, panel.Height - 1);
+            }
         }
 
         private static void PillBorder_Paint(object sender, PaintEventArgs e)
