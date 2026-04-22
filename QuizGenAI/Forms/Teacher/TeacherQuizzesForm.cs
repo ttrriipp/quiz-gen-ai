@@ -391,7 +391,12 @@ namespace QuizGenAI.Forms.Teacher
             try
             {
                 _quizService.DeleteQuiz(quiz.Id, CurrentUserId);
-                NotificationHelper.ShowSuccess(this, "Quiz Deleted", string.Format("Deleted \"{0}\".", quiz.Title));
+                NotificationHelper.ShowSuccess(
+                    this,
+                    "Quiz removed",
+                    string.Format(
+                        "\"{0}\" was removed from the app. The row is kept in the database for history, but the quiz can no longer be opened or used here.",
+                        quiz.Title));
                 LoadQuizCards();
             }
             catch (Exception ex)
