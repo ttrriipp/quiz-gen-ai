@@ -26,6 +26,11 @@ namespace QuizGenAI.Data
             var mathematics = EnsureSubject(context, "Mathematics", now);
             var science = EnsureSubject(context, "Science", now);
             var english = EnsureSubject(context, "English", now);
+            EnsureSubject(context, "History", now);
+            EnsureSubject(context, "Geography", now);
+            EnsureSubject(context, "Computer Science", now);
+            EnsureSubject(context, "Literature", now);
+            EnsureSubject(context, "Social Studies", now);
 
             context.SaveChanges();
 

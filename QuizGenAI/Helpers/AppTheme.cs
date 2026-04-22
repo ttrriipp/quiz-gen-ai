@@ -253,6 +253,11 @@ namespace QuizGenAI.Helpers
             }
 
             var rect = form.ClientRectangle;
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                return;
+            }
+
             using (var brush = new SolidBrush(BaseBackground))
             {
                 e.Graphics.FillRectangle(brush, rect);
@@ -260,6 +265,11 @@ namespace QuizGenAI.Helpers
 
             var glowColor = Color.FromArgb(80, 32, 102, 78);
             var glowRect = new Rectangle((int)(rect.Width * 0.42F), -60, (int)(rect.Width * 0.64F), (int)(rect.Height * 0.56F));
+            if (glowRect.Width <= 0 || glowRect.Height <= 0)
+            {
+                return;
+            }
+
             using (var glowBrush = new System.Drawing.Drawing2D.LinearGradientBrush(glowRect, glowColor, Color.Transparent, 45F))
             {
                 e.Graphics.FillEllipse(glowBrush, glowRect);

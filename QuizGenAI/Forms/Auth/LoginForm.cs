@@ -109,16 +109,6 @@ namespace QuizGenAI.Forms.Auth
             box.Leave += (s, e) => { wrap.BackColor = FieldBorder; };
         }
 
-        private void linkForgot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            NotificationHelper.ShowInfo(this, "Forgot password", "Password reset is not enabled in this demo build. Use a seeded account or ask your administrator.");
-        }
-
-        private void linkCreate_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            NotificationHelper.ShowInfo(this, "Create an account", "New accounts are created by a teacher or administrator in this demo build.");
-        }
-
         private void btnLogin_Click(object sender, EventArgs e)
         {
             btnLogin.Enabled = false;

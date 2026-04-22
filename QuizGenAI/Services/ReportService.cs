@@ -165,6 +165,7 @@ namespace QuizGenAI.Services
 
                 var quizzes = context.Quizzes
                     .Include(x => x.Subject)
+                    .Where(x => !x.IsDeleted)
                     .ToList();
 
                 var studentCount = context.UserRoles.Count(x => x.Role == UserRole.Student);

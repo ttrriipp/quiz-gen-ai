@@ -42,7 +42,8 @@ namespace QuizGenAI.Forms.Teacher
             SuspendLayout();
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
-            ClientSize = new Size(640, 420);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(700, 470);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -77,7 +78,7 @@ namespace QuizGenAI.Forms.Teacher
             var body = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(20)
+                Padding = new Padding(18, 16, 18, 18)
             };
 
             var card = new Panel
@@ -85,28 +86,57 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(18)
+                Padding = new Padding(22)
             };
+
+            var cardLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2
+            };
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var layout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
-                RowCount = 7
+                RowCount = 6,
+                Margin = new Padding(0)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            for (var i = 0; i < 6; i++)
+            for (var i = 0; i < 5; i++)
             {
-                layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
+                layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
             }
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            _cmbSubject = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-            _txtTopic = new TextBox { Dock = DockStyle.Fill };
-            _cmbDifficulty = new ComboBox { Dock = DockStyle.Left, Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
-            _nudQuestionCount = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 1, Maximum = 20, Value = 5 };
-            _nudDuration = new NumericUpDown { Dock = DockStyle.Left, Width = 100, Minimum = 0, Maximum = 180, Value = 15 };
+            _cmbSubject = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                IntegralHeight = false,
+                DropDownHeight = 240,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+            _txtTopic = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+            _cmbDifficulty = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+            _nudQuestionCount = CreateNumericInput(1, 20, 5);
+            _nudDuration = CreateNumericInput(1, 180, 15);
 
             foreach (QuizDifficulty difficulty in Enum.GetValues(typeof(QuizDifficulty)))
             {
@@ -116,9 +146,11 @@ namespace QuizGenAI.Forms.Teacher
 
             _lblNote = new Label
             {
-                Dock = DockStyle.Fill,
+                AutoSize = true,
+                MaximumSize = new Size(430, 0),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(107, 114, 128),
+                Margin = new Padding(0, 8, 0, 0),
                 Text = "If no AI endpoint is configured, the app uses a demo fallback generator so the review-first workflow remains testable."
             };
 
@@ -128,43 +160,45 @@ namespace QuizGenAI.Forms.Teacher
             layout.Controls.Add(_txtTopic, 1, 1);
             layout.Controls.Add(CreateFieldLabel("Difficulty"), 0, 2);
             layout.Controls.Add(_cmbDifficulty, 1, 2);
+            _nudQuestionCount.Dock = DockStyle.Left;
+            _nudDuration.Dock = DockStyle.Left;
+
             layout.Controls.Add(CreateFieldLabel("Question Count"), 0, 3);
             layout.Controls.Add(_nudQuestionCount, 1, 3);
-            layout.Controls.Add(CreateFieldLabel("Duration"), 0, 4);
+            layout.Controls.Add(CreateFieldLabel("Duration (minutes)"), 0, 4);
             layout.Controls.Add(_nudDuration, 1, 4);
             layout.Controls.Add(CreateFieldLabel("Notes"), 0, 5);
             layout.Controls.Add(_lblNote, 1, 5);
 
-            var buttonPanel = new Panel
+            var buttonPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Bottom,
-                Height = 48
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                Margin = new Padding(0, 18, 0, 0),
+                WrapContents = false
             };
 
             _btnGenerate = CreatePrimaryButton("Generate");
             _btnGenerate.Width = 120;
-            _btnGenerate.Location = new Point(0, 6);
+            _btnGenerate.Margin = new Padding(0, 0, 12, 0);
             _btnGenerate.Click += async delegate { await GenerateAsync(); };
 
-            var btnCancel = new Button
-            {
-                Text = "Cancel",
-                Width = 92,
-                Height = 34,
-                Location = new Point(132, 6),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
+            var btnCancel = CreateSecondaryButton("Cancel");
             btnCancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 
             buttonPanel.Controls.Add(_btnGenerate);
             buttonPanel.Controls.Add(btnCancel);
 
-            card.Controls.Add(buttonPanel);
-            card.Controls.Add(layout);
+            cardLayout.Controls.Add(layout, 0, 0);
+            cardLayout.Controls.Add(buttonPanel, 0, 1);
+            card.Controls.Add(cardLayout);
             body.Controls.Add(card);
             Controls.Add(body);
             Controls.Add(header);
+            AcceptButton = _btnGenerate;
+            CancelButton = btnCancel;
             ResumeLayout();
         }
 
@@ -237,7 +271,20 @@ namespace QuizGenAI.Forms.Teacher
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(55, 65, 81),
+                Margin = new Padding(0, 6, 12, 6),
                 Text = text
+            };
+        }
+
+        private static NumericUpDown CreateNumericInput(decimal minimum, decimal maximum, decimal value)
+        {
+            return new NumericUpDown
+            {
+                Minimum = minimum,
+                Maximum = maximum,
+                Value = value,
+                Width = 110,
+                Margin = new Padding(0)
             };
         }
 
@@ -255,6 +302,19 @@ namespace QuizGenAI.Forms.Teacher
             };
             button.FlatAppearance.BorderSize = 0;
             return button;
+        }
+
+        private static Button CreateSecondaryButton(string text)
+        {
+            return new Button
+            {
+                Text = text,
+                Width = 92,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0)
+            };
         }
     }
 }

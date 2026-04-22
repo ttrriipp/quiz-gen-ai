@@ -293,7 +293,7 @@ namespace QuizGenAI.Forms.Student
             var btnAllResults = CreateActionButton("View All Results", Color.FromArgb(22, 88, 61), Color.White);
             btnAllResults.Click += delegate
             {
-                DialogResult = DialogResult.OK;
+                DialogResult = DialogResult.Yes;
                 Close();
             };
 

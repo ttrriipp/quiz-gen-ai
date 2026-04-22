@@ -40,7 +40,7 @@ namespace QuizGenAI.Services
                     .Include(x => x.Subject)
                     .Include(x => x.Questions)
                     .Include(x => x.StudentAttempts)
-                    .Where(x => x.Status == QuizStatus.Published)
+                    .Where(x => !x.IsDeleted && x.Status == QuizStatus.Published)
                     .OrderBy(x => x.AvailableFrom ?? x.UpdatedAt)
                     .ThenBy(x => x.Title)
                     .ToList();
@@ -89,6 +89,7 @@ namespace QuizGenAI.Services
                 var query = context.Quizzes
                     .Include(x => x.Subject)
                     .Include(x => x.Questions)
+                    .Where(x => !x.IsDeleted)
                     .AsQueryable();
 
                 if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -135,7 +136,7 @@ namespace QuizGenAI.Services
                     .Include(x => x.Questions.Select(q => q.Choices))
                     .SingleOrDefault(x => x.Id == quizId);
 
-                if (quiz == null)
+                if (quiz == null || quiz.IsDeleted)
                 {
                     throw new InvalidOperationException("Quiz not found.");
                 }
@@ -196,6 +197,11 @@ namespace QuizGenAI.Services
                     if (quiz == null)
                     {
                         throw new InvalidOperationException("Quiz not found.");
+                    }
+
+                    if (quiz.IsDeleted)
+                    {
+                        throw new InvalidOperationException("This quiz is no longer available.");
                     }
 
                     foreach (var question in quiz.Questions.ToList())
@@ -290,7 +296,6 @@ namespace QuizGenAI.Services
                 EnsureTeacherOrAdmin(context, userId);
 
                 var quiz = context.Quizzes
-                    .Include(x => x.Questions.Select(q => q.Choices))
                     .SingleOrDefault(x => x.Id == quizId);
 
                 if (quiz == null)
@@ -298,16 +303,17 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Quiz not found.");
                 }
 
-                foreach (var question in quiz.Questions.ToList())
+                if (quiz.IsDeleted)
                 {
-                    context.Choices.RemoveRange(question.Choices.ToList());
+                    return;
                 }
 
-                context.Questions.RemoveRange(quiz.Questions.ToList());
-                context.Quizzes.Remove(quiz);
+                var now = DateTime.UtcNow;
+                quiz.IsDeleted = true;
+                quiz.UpdatedAt = now;
                 context.SaveChanges();
 
-                LoggingService.Information("Quiz deleted. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
+                LoggingService.Information("Quiz soft-deleted. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
             }
         }
 
@@ -324,6 +330,11 @@ namespace QuizGenAI.Services
                 if (quiz == null)
                 {
                     throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.IsDeleted)
+                {
+                    throw new InvalidOperationException("This quiz is no longer available.");
                 }
 
                 if (quiz.Status == QuizStatus.Archived)
@@ -353,6 +364,11 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Quiz not found.");
                 }
 
+                if (quiz.IsDeleted)
+                {
+                    throw new InvalidOperationException("This quiz is no longer available.");
+                }
+
                 if (quiz.Status != QuizStatus.Published)
                 {
                     throw new InvalidOperationException("Only published quizzes can be moved back to draft.");
@@ -376,6 +392,11 @@ namespace QuizGenAI.Services
                 if (quiz == null)
                 {
                     throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.IsDeleted)
+                {
+                    throw new InvalidOperationException("This quiz is no longer available.");
                 }
 
                 if (quiz.Status == QuizStatus.Archived)

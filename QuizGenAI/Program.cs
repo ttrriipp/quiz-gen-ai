@@ -36,6 +36,7 @@ namespace QuizGenAI
                 }
 
                 EnsureDatabaseSchema(databasePath);
+                EnsureQuizzesIsDeletedColumn(databasePath);
 
                 using (var context = new QuizGenAIDbContext())
                 {
@@ -142,6 +143,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
     ai_generated INTEGER NOT NULL,
     available_from DATETIME NULL,
     available_until DATETIME NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(subject_id) REFERENCES subjects(id),
     FOREIGN KEY(created_by) REFERENCES users(id)
 );
@@ -203,6 +205,31 @@ CREATE TABLE IF NOT EXISTS ai_generations (
     FOREIGN KEY(quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
 );";
                     command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private static void EnsureQuizzesIsDeletedColumn(string databasePath)
+        {
+            if (!File.Exists(databasePath))
+            {
+                return;
+            }
+
+            var connectionString = string.Format("Data Source={0};Version=3;Foreign Keys=True;", databasePath);
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('quizzes') WHERE name = 'is_deleted';";
+                    var exists = Convert.ToInt32(command.ExecuteScalar()) > 0;
+                    if (!exists)
+                    {
+                        command.CommandText = "ALTER TABLE quizzes ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;";
+                        command.ExecuteNonQuery();
+                    }
                 }
             }
         }

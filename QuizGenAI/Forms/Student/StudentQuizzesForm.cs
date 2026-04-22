@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
 using ScottPlot.WinForms;
@@ -15,6 +16,10 @@ namespace QuizGenAI.Forms.Student
 {
     public partial class StudentQuizzesForm : Form
     {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
+
+        private const int EmSetCueBanner = 0x1501;
         private static readonly Color ReportsWorkspaceBg = Color.FromArgb(11, 48, 34);
         private static readonly Color ReportsCardBg = Color.FromArgb(16, 58, 44);
         private static readonly Color ReportsInnerBg = Color.FromArgb(12, 46, 36);
@@ -30,14 +35,19 @@ namespace QuizGenAI.Forms.Student
         private readonly QuizService _quizService = new QuizService();
         private readonly RecommendationService _recommendationService = new RecommendationService();
         private readonly ReportService _reportService = new ReportService();
+        private List<StudentQuizListItemDto> _studentQuizzes = new List<StudentQuizListItemDto>();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
+        private Label _lblQuizSearchSummary;
         private Panel _contentHost;
+        private FlowLayoutPanel _quizCardsHost;
+        private TextBox _txtQuizSearch;
         private Panel _topBar;
         private Label _lblGreeting;
         private string _displayName = "Student";
         private int _currentUserId;
         private string _activeSection = "quizzes";
+        private string _quizSearchTerm = string.Empty;
 
         public StudentQuizzesForm()
         {
@@ -290,7 +300,7 @@ namespace QuizGenAI.Forms.Student
         private void RenderQuizLandingView()
         {
             _contentHost.Controls.Clear();
-            var quizzes = _quizService.GetStudentQuizList(_currentUserId);
+            _studentQuizzes = _quizService.GetStudentQuizList(_currentUserId);
 
             var root = new TableLayoutPanel
             {
@@ -302,7 +312,7 @@ namespace QuizGenAI.Forms.Student
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 158F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             root.Controls.Add(CreateQuizLandingHeroPanel(), 0, 0);
-            root.Controls.Add(CreateQuizBrowserPanel(quizzes), 0, 1);
+            root.Controls.Add(CreateQuizBrowserPanel(), 0, 1);
             _contentHost.Controls.Add(root);
         }
 
@@ -933,7 +943,7 @@ namespace QuizGenAI.Forms.Student
             }
         }
 
-        private Panel CreateQuizBrowserPanel(IList<StudentQuizListItemDto> quizzes)
+        private Panel CreateQuizBrowserPanel()
         {
             var panel = new Panel
             {
@@ -941,7 +951,78 @@ namespace QuizGenAI.Forms.Student
                 BackColor = Color.Transparent
             };
 
-            var cardsHost = new FlowLayoutPanel
+            var controlsPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 108,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 0, 0, 16)
+            };
+
+            var searchCard = new Panel
+            {
+                Size = new Size(520, 56),
+                Location = new Point(0, 0),
+                BackColor = ReportsCardBg,
+                Margin = Padding.Empty,
+                Padding = new Padding(18, 0, 18, 0),
+                Tag = AppTheme.SkipCognitaThemeTag
+            };
+            searchCard.Paint += RoundedInsetRow_Paint;
+
+            var lblSearchPrefix = new Label
+            {
+                AutoSize = false,
+                Location = new Point(18, 0),
+                Width = 76,
+                Height = searchCard.Height,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = ReportsAccent,
+                BackColor = Color.Transparent,
+                Text = "Search",
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            _txtQuizSearch = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                BackColor = ReportsCardBg,
+                ForeColor = ReportsTextPrimary,
+                Font = new Font("Segoe UI", 10.5F),
+                Location = new Point(94, 19),
+                Width = searchCard.Width - 112,
+                Text = _quizSearchTerm
+            };
+            _txtQuizSearch.HandleCreated += delegate
+            {
+                SendMessage(_txtQuizSearch.Handle, EmSetCueBanner, IntPtr.Zero, "Search by title, topic, or subject...");
+            };
+            _txtQuizSearch.TextChanged += QuizSearchTextChanged;
+
+            searchCard.Resize += delegate
+            {
+                lblSearchPrefix.Height = searchCard.Height;
+                _txtQuizSearch.Width = Math.Max(180, searchCard.ClientSize.Width - 112);
+                _txtQuizSearch.Top = Math.Max(16, (searchCard.ClientSize.Height - _txtQuizSearch.PreferredHeight) / 2);
+            };
+            searchCard.Controls.Add(_txtQuizSearch);
+            searchCard.Controls.Add(lblSearchPrefix);
+
+            _lblQuizSearchSummary = new Label
+            {
+                AutoSize = false,
+                Location = new Point(0, 68),
+                Width = 560,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent
+            };
+
+            controlsPanel.Controls.Add(_lblQuizSearchSummary);
+            controlsPanel.Controls.Add(searchCard);
+
+            _quizCardsHost = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
@@ -953,22 +1034,100 @@ namespace QuizGenAI.Forms.Student
                 AutoSize = false
             };
 
-            if (quizzes.Count == 0)
+            panel.Controls.Add(_quizCardsHost);
+            panel.Controls.Add(controlsPanel);
+
+            RefreshQuizCards();
+            return panel;
+        }
+
+        private void QuizSearchTextChanged(object sender, EventArgs e)
+        {
+            _quizSearchTerm = _txtQuizSearch == null ? string.Empty : _txtQuizSearch.Text;
+            RefreshQuizCards();
+        }
+
+        private void RefreshQuizCards()
+        {
+            if (_quizCardsHost == null)
+            {
+                return;
+            }
+
+            var filteredQuizzes = GetFilteredStudentQuizzes();
+
+            _quizCardsHost.SuspendLayout();
+            _quizCardsHost.Controls.Clear();
+
+            if (_studentQuizzes.Count == 0)
             {
                 var empty = CreateQuizEmptyStateCard();
                 empty.Margin = new Padding(0, 0, 18, 18);
-                cardsHost.Controls.Add(empty);
+                _quizCardsHost.Controls.Add(empty);
             }
             else
             {
-                foreach (var quiz in quizzes)
+                if (filteredQuizzes.Count == 0)
                 {
-                    cardsHost.Controls.Add(CreateQuizCard(quiz));
+                    var empty = CreateQuizEmptyStateCard("No quizzes match your search. Try a different title, topic, or subject.");
+                    empty.Margin = new Padding(0, 0, 18, 18);
+                    _quizCardsHost.Controls.Add(empty);
+                }
+                else
+                {
+                    foreach (var quiz in filteredQuizzes)
+                    {
+                        _quizCardsHost.Controls.Add(CreateQuizCard(quiz));
+                    }
                 }
             }
 
-            panel.Controls.Add(cardsHost);
-            return panel;
+            _quizCardsHost.ResumeLayout();
+            UpdateQuizSearchSummary(filteredQuizzes.Count);
+        }
+
+        private List<StudentQuizListItemDto> GetFilteredStudentQuizzes()
+        {
+            if (string.IsNullOrWhiteSpace(_quizSearchTerm))
+            {
+                return _studentQuizzes.ToList();
+            }
+
+            var search = _quizSearchTerm.Trim();
+
+            return _studentQuizzes
+                .Where(x =>
+                    (!string.IsNullOrWhiteSpace(x.Title) && x.Title.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (!string.IsNullOrWhiteSpace(x.Topic) && x.Topic.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (!string.IsNullOrWhiteSpace(x.SubjectName) && x.SubjectName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0))
+                .ToList();
+        }
+
+        private void UpdateQuizSearchSummary(int filteredCount)
+        {
+            if (_lblQuizSearchSummary == null)
+            {
+                return;
+            }
+
+            if (_studentQuizzes.Count == 0)
+            {
+                _lblQuizSearchSummary.Text = "Published quizzes will appear here as soon as they are available.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_quizSearchTerm))
+            {
+                _lblQuizSearchSummary.Text = string.Format("{0} published quiz{1} available.", filteredCount, filteredCount == 1 ? string.Empty : "zes");
+                return;
+            }
+
+            _lblQuizSearchSummary.Text = string.Format(
+                "{0} of {1} quiz{2} shown for \"{3}\".",
+                filteredCount,
+                _studentQuizzes.Count,
+                _studentQuizzes.Count == 1 ? string.Empty : "zes",
+                _quizSearchTerm.Trim());
         }
 
         private Control CreateQuizEmptyStateCard()
@@ -1153,7 +1312,12 @@ namespace QuizGenAI.Forms.Student
                 using (var examForm = new ExamForm(_currentUserId, attemptId))
                 {
                     examForm.Text = quiz.Title;
-                    examForm.ShowDialog(this);
+                    var examResult = examForm.ShowDialog(this);
+                    if (examResult == DialogResult.Yes)
+                    {
+                        ShowSection("results");
+                        return;
+                    }
                 }
 
                 RenderQuizLandingView();

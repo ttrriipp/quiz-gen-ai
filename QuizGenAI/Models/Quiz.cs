@@ -60,6 +60,9 @@ namespace QuizGenAI.Models
         [Column("available_until")]
         public DateTime? AvailableUntil { get; set; }
 
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; }
+
         public virtual Subject Subject { get; set; }
         public virtual User CreatedByUser { get; set; }
         public virtual ICollection<Question> Questions { get; set; }

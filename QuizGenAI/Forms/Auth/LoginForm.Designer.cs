@@ -22,9 +22,6 @@ namespace QuizGenAI.Forms.Auth
         private System.Windows.Forms.Panel pnlPasswordWrap;
         private System.Windows.Forms.TextBox txtPassword;
         private System.Windows.Forms.Button btnLogin;
-        private System.Windows.Forms.FlowLayoutPanel flowLinks;
-        private System.Windows.Forms.LinkLabel linkForgot;
-        private System.Windows.Forms.LinkLabel linkCreate;
         private System.Windows.Forms.Label lblHint;
 
         protected override void Dispose(bool disposing)
@@ -58,9 +55,6 @@ namespace QuizGenAI.Forms.Auth
             this.pnlPasswordWrap = new System.Windows.Forms.Panel();
             this.txtPassword = new System.Windows.Forms.TextBox();
             this.btnLogin = new System.Windows.Forms.Button();
-            this.flowLinks = new System.Windows.Forms.FlowLayoutPanel();
-            this.linkForgot = new System.Windows.Forms.LinkLabel();
-            this.linkCreate = new System.Windows.Forms.LinkLabel();
             this.lblHint = new System.Windows.Forms.Label();
             this.panelBackground.SuspendLayout();
             this.pnlCard.SuspendLayout();
@@ -69,7 +63,6 @@ namespace QuizGenAI.Forms.Auth
             this.flowTagline.SuspendLayout();
             this.pnlEmailWrap.SuspendLayout();
             this.pnlPasswordWrap.SuspendLayout();
-            this.flowLinks.SuspendLayout();
             this.SuspendLayout();
             // 
             // panelBackground
@@ -107,13 +100,11 @@ namespace QuizGenAI.Forms.Auth
             this.layoutCard.Controls.Add(this.lblPassword, 0, 6);
             this.layoutCard.Controls.Add(this.pnlPasswordWrap, 0, 7);
             this.layoutCard.Controls.Add(this.btnLogin, 0, 8);
-            this.layoutCard.Controls.Add(this.flowLinks, 0, 9);
-            this.layoutCard.Controls.Add(this.lblHint, 0, 10);
+            this.layoutCard.Controls.Add(this.lblHint, 0, 9);
             this.layoutCard.Dock = System.Windows.Forms.DockStyle.Fill;
             this.layoutCard.Location = new System.Drawing.Point(28, 26);
             this.layoutCard.Name = "layoutCard";
-            this.layoutCard.RowCount = 11;
-            this.layoutCard.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.layoutCard.RowCount = 10;
             this.layoutCard.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.layoutCard.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.layoutCard.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -329,62 +320,16 @@ namespace QuizGenAI.Forms.Auth
             this.btnLogin.UseVisualStyleBackColor = false;
             this.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
             // 
-            // flowLinks
-            // 
-            this.flowLinks.AutoSize = true;
-            this.flowLinks.Controls.Add(this.linkForgot);
-            this.flowLinks.Controls.Add(this.linkCreate);
-            this.flowLinks.Location = new System.Drawing.Point(0, 330);
-            this.flowLinks.Margin = new System.Windows.Forms.Padding(0, 0, 0, 14);
-            this.flowLinks.Name = "flowLinks";
-            this.flowLinks.Size = new System.Drawing.Size(384, 23);
-            this.flowLinks.TabIndex = 9;
-            this.flowLinks.WrapContents = false;
-            // 
-            // linkForgot
-            // 
-            this.linkForgot.ActiveLinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(242)))), ((int)(((byte)(201)))), ((int)(((byte)(76)))));
-            this.linkForgot.AutoSize = true;
-            this.linkForgot.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.linkForgot.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
-            this.linkForgot.LinkColor = System.Drawing.Color.White;
-            this.linkForgot.Location = new System.Drawing.Point(0, 0);
-            this.linkForgot.Margin = new System.Windows.Forms.Padding(0, 0, 18, 0);
-            this.linkForgot.Name = "linkForgot";
-            this.linkForgot.Size = new System.Drawing.Size(95, 15);
-            this.linkForgot.TabIndex = 0;
-            this.linkForgot.TabStop = true;
-            this.linkForgot.Text = "Forgot password?";
-            this.linkForgot.VisitedLinkColor = System.Drawing.Color.White;
-            this.linkForgot.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkForgot_LinkClicked);
-            // 
-            // linkCreate
-            // 
-            this.linkCreate.ActiveLinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(242)))), ((int)(((byte)(201)))), ((int)(((byte)(76)))));
-            this.linkCreate.AutoSize = true;
-            this.linkCreate.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.linkCreate.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
-            this.linkCreate.LinkColor = System.Drawing.Color.White;
-            this.linkCreate.Location = new System.Drawing.Point(113, 0);
-            this.linkCreate.Margin = new System.Windows.Forms.Padding(0);
-            this.linkCreate.Name = "linkCreate";
-            this.linkCreate.Size = new System.Drawing.Size(105, 15);
-            this.linkCreate.TabIndex = 1;
-            this.linkCreate.TabStop = true;
-            this.linkCreate.Text = "Create an account";
-            this.linkCreate.VisitedLinkColor = System.Drawing.Color.White;
-            this.linkCreate.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkCreate_LinkClicked);
-            // 
             // lblHint
             // 
             this.lblHint.AutoSize = true;
             this.lblHint.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblHint.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(140)))), ((int)(((byte)(160)))), ((int)(((byte)(152)))));
-            this.lblHint.Location = new System.Drawing.Point(0, 367);
+            this.lblHint.Location = new System.Drawing.Point(0, 330);
             this.lblHint.Margin = new System.Windows.Forms.Padding(0);
             this.lblHint.Name = "lblHint";
             this.lblHint.Size = new System.Drawing.Size(242, 39);
-            this.lblHint.TabIndex = 10;
+            this.lblHint.TabIndex = 9;
             this.lblHint.Text = "Demo: admin@quizgenai.local / Admin123!\r\nteacher@quizgenai.local / Teacher123!\r\nstudent@quizgenai.local / Student123!";
             // 
             // LoginForm
@@ -413,8 +358,6 @@ namespace QuizGenAI.Forms.Auth
             this.pnlEmailWrap.PerformLayout();
             this.pnlPasswordWrap.ResumeLayout(false);
             this.pnlPasswordWrap.PerformLayout();
-            this.flowLinks.ResumeLayout(false);
-            this.flowLinks.PerformLayout();
             this.ResumeLayout(false);
         }
     }

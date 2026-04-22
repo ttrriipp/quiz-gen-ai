@@ -143,6 +143,11 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Exam attempt not found.");
                 }
 
+                if (attempt.Quiz != null && attempt.Quiz.IsDeleted)
+                {
+                    throw new InvalidOperationException("This quiz is no longer available.");
+                }
+
                 if (attempt.SubmittedAt.HasValue)
                 {
                     throw new InvalidOperationException("Submitted attempts cannot be changed.");
@@ -282,6 +287,11 @@ namespace QuizGenAI.Services
 
         private static void ValidateStudentCanAccessQuiz(Quiz quiz)
         {
+            if (quiz != null && quiz.IsDeleted)
+            {
+                throw new InvalidOperationException("This quiz is no longer available.");
+            }
+
             if (quiz.Status != QuizStatus.Published)
             {
                 throw new InvalidOperationException("Students can only start published quizzes.");
