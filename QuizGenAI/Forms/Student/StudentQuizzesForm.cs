@@ -1312,7 +1312,12 @@ namespace QuizGenAI.Forms.Student
                 using (var examForm = new ExamForm(_currentUserId, attemptId))
                 {
                     examForm.Text = quiz.Title;
-                    examForm.ShowDialog(this);
+                    var examResult = examForm.ShowDialog(this);
+                    if (examResult == DialogResult.Yes)
+                    {
+                        ShowSection("results");
+                        return;
+                    }
                 }
 
                 RenderQuizLandingView();

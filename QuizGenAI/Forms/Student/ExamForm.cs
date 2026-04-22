@@ -690,13 +690,14 @@ namespace QuizGenAI.Forms.Student
                 summary.WeakAreaSummary = recommendations.WeakAreaSummary;
                 NotificationHelper.ShowSuccess(this, "Exam Submitted", "Your answers were submitted and scored successfully.");
 
+                var openAllResults = false;
                 using (var resultsForm = new StudentResultsForm(summary))
                 {
                     resultsForm.Text = string.Format("Results - {0}", summary.QuizTitle);
-                    resultsForm.ShowDialog(this);
+                    openAllResults = resultsForm.ShowDialog(this) == DialogResult.Yes;
                 }
 
-                DialogResult = DialogResult.OK;
+                DialogResult = openAllResults ? DialogResult.Yes : DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
