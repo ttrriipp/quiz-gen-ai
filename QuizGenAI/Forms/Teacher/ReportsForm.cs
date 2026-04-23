@@ -33,6 +33,7 @@ namespace QuizGenAI.Forms.Teacher
         public ReportsForm()
         {
             InitializeComponent();
+            DoubleBuffered = true;
             if (DesignTimeHelper.IsInDesignMode(this))
             {
                 return;

@@ -8,7 +8,6 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using Guna.UI2.WinForms;
 using QuizGenAI.DTOs;
-using QuizGenAI.Enums;
 using QuizGenAI.Helpers;
 using QuizGenAI.Services;
 using ScottPlot.WinForms;
@@ -20,7 +19,6 @@ namespace QuizGenAI.Forms.Teacher
     {
         private readonly Dictionary<string, Guna2Button> _navButtons = new Dictionary<string, Guna2Button>();
         private readonly ReportService _reportService = new ReportService();
-        private readonly QuizService _quizService = new QuizService();
         private Label _lblPageTitle;
         private Label _lblPageDescription;
         private Panel _topBar;
@@ -44,6 +42,7 @@ namespace QuizGenAI.Forms.Teacher
         public TeacherDashboardForm()
         {
             InitializeComponent();
+            DoubleBuffered = true;
             if (DesignTimeHelper.IsInDesignMode(this))
             {
                 return;
@@ -73,7 +72,7 @@ namespace QuizGenAI.Forms.Teacher
             Controls.Clear();
 
             BackColor = MainWorkspaceGreen;
-            Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            Font = AppTheme.GetBodyFont(10F);
             FormBorderStyle = FormBorderStyle.None;
             WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
@@ -99,7 +98,7 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Top,
                 Height = 38,
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 20F, FontStyle.Bold),
+                Font = AppTheme.GetTitleFont(20F),
                 Text = "QuizGen AI"
             };
 
@@ -109,7 +108,7 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Top,
                 Height = 22,
                 ForeColor = Color.FromArgb(156, 163, 175),
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                Font = AppTheme.GetBodyFont(10F),
                 Text = "Teacher / Admin Workspace"
             };
 
@@ -144,7 +143,7 @@ namespace QuizGenAI.Forms.Teacher
                 BorderRadius = 8,
                 FillColor = Color.FromArgb(185, 28, 28),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Font = AppTheme.GetBodyFont(10F, FontStyle.Bold),
                 Text = "Logout",
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 0, 10)
@@ -169,7 +168,7 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Bottom,
                 Height = 48,
                 ForeColor = Color.FromArgb(209, 213, 219),
-                Font = new Font("Segoe UI", 10F),
+                Font = AppTheme.GetBodyFont(10F),
                 TextAlign = ContentAlignment.BottomLeft,
                 Text = string.Format("Signed in as {0}", _displayName)
             };
@@ -194,7 +193,7 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSize = false,
                 Dock = DockStyle.Top,
                 Height = 36,
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold)
+                Font = AppTheme.GetTitleFont(22F)
             };
 
             _lblPageDescription = new Label
@@ -202,7 +201,7 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSize = false,
                 Dock = DockStyle.Top,
                 Height = 20,
-                Font = new Font("Segoe UI", 10F)
+                Font = AppTheme.GetBodyFont(10F)
             };
 
             _topBar.Controls.Add(_lblPageDescription);
@@ -230,7 +229,7 @@ namespace QuizGenAI.Forms.Teacher
                 Height = 46,
                 BackColor = Color.FromArgb(31, 41, 55),
                 ForeColor = Color.FromArgb(229, 231, 235),
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Font = AppTheme.GetBodyFont(10F, FontStyle.Bold),
                 Text = text,
                 Tag = key,
                 Cursor = Cursors.Hand,
@@ -313,33 +312,25 @@ namespace QuizGenAI.Forms.Teacher
             _contentHost.Controls.Clear();
             var dashboard = _reportService.GetTeacherDashboard();
             var reports = _reportService.GetTeacherReports();
-            var quizzes = _quizService
-                .GetQuizSummaries(null, null)
-                .OrderByDescending(x => x.UpdatedAt)
-                .Take(3)
-                .ToList();
 
             var root = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 5,
+                RowCount = 4,
                 BackColor = Color.Transparent
             };
 
             root.RowStyles.Clear();
-            for (var i = 0; i < 5; i++)
-            {
-                root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            }
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 86F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 112F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 46F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 54F));
 
             root.Controls.Add(CreateDashboardWelcomeHeader(), 0, 0);
             root.Controls.Add(CreateDashboardStatsRow(dashboard), 0, 1);
             root.Controls.Add(CreateDashboardAnalyticsRow(reports), 0, 2);
             root.Controls.Add(CreateDashboardPerformanceRow(dashboard), 0, 3);
-            root.Controls.Add(CreateDashboardQuizzesSection(quizzes), 0, 4);
             _contentHost.Controls.Add(root);
         }
 
@@ -347,9 +338,7 @@ namespace QuizGenAI.Forms.Teacher
         {
             var row = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1,
                 Margin = new Padding(0, 0, 0, 8),
@@ -369,7 +358,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Top,
                 Height = 42,
-                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                Font = AppTheme.GetTitleFont(24F),
                 ForeColor = DashboardText,
                 Text = string.Format("Welcome back, {0}", DisplayName)
             };
@@ -378,7 +367,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Top,
                 Height = 24,
-                Font = new Font("Segoe UI", 10F),
+                Font = AppTheme.GetBodyFont(10F),
                 ForeColor = DashboardMuted,
                 Text = "Here is what is happening across your quizzes today."
             };
@@ -394,7 +383,7 @@ namespace QuizGenAI.Forms.Teacher
                 BorderRadius = 10,
                 FillColor = Color.FromArgb(18, 95, 65),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Font = AppTheme.GetBodyFont(10F, FontStyle.Bold),
                 Text = "Generate Quiz",
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 18, 0, 0)
@@ -413,9 +402,7 @@ namespace QuizGenAI.Forms.Teacher
         {
             var row = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
                 ColumnCount = 4,
                 RowCount = 1,
                 Margin = new Padding(0, 0, 0, 16),
@@ -437,19 +424,14 @@ namespace QuizGenAI.Forms.Teacher
         {
             var row = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                ColumnCount = 2,
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
                 RowCount = 1,
                 Margin = new Padding(0, 0, 0, 16),
                 BackColor = Color.Transparent
             };
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62F));
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38F));
-
-            row.Controls.Add(CreateTrendChartCard(reports), 0, 0);
-            row.Controls.Add(CreatePassFailCard(reports), 1, 0);
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            row.Controls.Add(CreatePassFailCard(reports), 0, 0);
             return row;
         }
 
@@ -457,9 +439,7 @@ namespace QuizGenAI.Forms.Teacher
         {
             var row = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1,
                 Margin = new Padding(0, 0, 0, 18),
@@ -473,72 +453,21 @@ namespace QuizGenAI.Forms.Teacher
             return row;
         }
 
-        private Control CreateDashboardQuizzesSection(List<QuizListItemDto> quizzes)
-        {
-            var section = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 214,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0)
-            };
-
-            var header = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 34,
-                ColumnCount = 1,
-                RowCount = 1,
-                BackColor = Color.Transparent
-            };
-            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-
-            header.Controls.Add(new Label
-            {
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
-                ForeColor = DashboardText,
-                Text = "Your quizzes",
-                TextAlign = ContentAlignment.MiddleLeft
-            }, 0, 0);
-
-            var cards = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(0, 10, 0, 0),
-                BackColor = Color.Transparent
-            };
-            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
-
-            for (var i = 0; i < 3; i++)
-            {
-                var quiz = i < quizzes.Count ? quizzes[i] : null;
-                cards.Controls.Add(CreateQuizPreviewCard(quiz, i), i, 0);
-            }
-
-            section.Controls.Add(cards);
-            section.Controls.Add(header);
-            return section;
-        }
-
         private Panel CreateDashboardStatCard(string title, string value, string note, bool highlighted)
         {
             var panel = CreateDashboardCardPanel();
             panel.Height = 100;
             panel.Margin = new Padding(0, 0, 16, 0);
-            panel.Padding = new Padding(18, 12, 18, 12);
+            panel.Padding = new Padding(18, 12, 18, 16);
             panel.BackColor = highlighted ? DashboardCardStrong : DashboardCard;
 
             panel.Controls.Add(new Label
             {
-                Dock = DockStyle.Top,
-                Height = 18,
-                Font = new Font("Segoe UI", 8.8F),
+                Dock = DockStyle.Bottom,
+                Height = 20,
+                Font = AppTheme.GetBodyFont(8.8F),
                 ForeColor = highlighted ? Color.FromArgb(232, 242, 232) : DashboardMuted,
+                TextAlign = ContentAlignment.MiddleLeft,
                 Text = note
             });
 
@@ -546,7 +475,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Top,
                 Height = 48,
-                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                Font = AppTheme.GetTitleFont(24F),
                 ForeColor = DashboardText,
                 Text = value
             });
@@ -555,44 +484,11 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Top,
                 Height = 18,
-                Font = new Font("Segoe UI", 8.5F),
+                Font = AppTheme.GetBodyFont(8.5F),
                 ForeColor = highlighted ? Color.FromArgb(228, 238, 228) : DashboardMuted,
                 Text = title.ToUpperInvariant()
             });
 
-            return panel;
-        }
-
-        private Panel CreateTrendChartCard(TeacherReportsDto reports)
-        {
-            var panel = CreateDashboardCardPanel();
-            panel.Height = 228;
-            panel.Padding = new Padding(18, 14, 18, 16);
-            panel.Margin = new Padding(0, 0, 16, 0);
-
-            var chart = new FormsPlot
-            {
-                Dock = DockStyle.Fill,
-                BackColor = DashboardPlot
-            };
-
-            ConfigureMiniPlot(chart.Plot);
-            var xs = Enumerable.Range(0, reports.ScoreTrendByMonth.Count).Select(i => (double)i).ToArray();
-            var ys = reports.ScoreTrendByMonth.Select(x => x.AverageScore ?? 0D).ToArray();
-            var labels = reports.ScoreTrendByMonth.Select(x => x.MonthLabel).ToArray();
-            if (xs.Length > 0)
-            {
-                var scatter = chart.Plot.Add.ScatterLine(xs, ys);
-                scatter.Color = ScottColor.FromColor(DashboardAccent);
-                scatter.LineWidth = 2.5F;
-                chart.Plot.Add.ScatterPoints(xs, ys).Color = ScottColor.FromColor(DashboardAccent);
-                chart.Plot.Axes.Bottom.SetTicks(xs, labels);
-                chart.Plot.Axes.Left.Label.Text = "%";
-                chart.Plot.Axes.Margins(0.06, 0.08, 0.1, 0.12);
-            }
-
-            panel.Controls.Add(chart);
-            panel.Controls.Add(CreateDashboardCardHeader("Class performance trend"));
             return panel;
         }
 
@@ -602,11 +498,19 @@ namespace QuizGenAI.Forms.Teacher
             panel.Height = 228;
             panel.Padding = new Padding(14, 14, 14, 14);
 
+            var chartHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DashboardCard,
+                Padding = new Padding(8, 4, 8, 2)
+            };
+
             var chart = new Chart
             {
                 Dock = DockStyle.Fill,
                 BackColor = DashboardCard,
-                Palette = ChartColorPalette.None
+                Palette = ChartColorPalette.None,
+                Margin = Padding.Empty
             };
 
             var area = new ChartArea("donut")
@@ -615,17 +519,24 @@ namespace QuizGenAI.Forms.Teacher
             };
             area.AxisX.Enabled = AxisEnabled.False;
             area.AxisY.Enabled = AxisEnabled.False;
+            area.Position = new ElementPosition(10F, 8F, 80F, 84F);
+            area.InnerPlotPosition = new ElementPosition(8F, 8F, 84F, 84F);
             chart.ChartAreas.Add(area);
 
             var series = new Series("PassFail")
             {
                 ChartType = SeriesChartType.Doughnut,
                 ChartArea = "donut",
-                IsValueShownAsLabel = false
+                IsValueShownAsLabel = true,
+                LabelForeColor = Color.White,
+                Font = AppTheme.GetBodyFont(9F, FontStyle.Bold)
             };
             series["DoughnutRadius"] = "72";
+            series["PieLabelStyle"] = "Inside";
             series.Points.AddXY("Pass", Math.Max(0, reports.PassCount));
             series.Points.AddXY("Fail", Math.Max(0, reports.FailCount));
+            series.Points[0].Label = "Pass";
+            series.Points[1].Label = "Fail";
             series.Points[0].Color = Color.FromArgb(24, 105, 72);
             series.Points[1].Color = DashboardDanger;
             chart.Series.Add(series);
@@ -643,8 +554,9 @@ namespace QuizGenAI.Forms.Teacher
             legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", reports.FailCount)));
 
             panel.Controls.Add(legend);
-            panel.Controls.Add(chart);
-            panel.Controls.Add(CreateDashboardCardHeader("Pass vs fail"));
+            chartHost.Controls.Add(chart);
+            panel.Controls.Add(chartHost);
+            panel.Controls.Add(CreateDashboardCardHeader("Pass vs Fail"));
             return panel;
         }
 
@@ -689,32 +601,38 @@ namespace QuizGenAI.Forms.Teacher
             var panel = CreateDashboardCardPanel();
             panel.Height = 228;
             panel.Padding = new Padding(16, 14, 16, 12);
+            var recentItems = dashboard.RecentSubmissions.Take(4).ToList();
 
-            var list = new FlowLayoutPanel
+            var list = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = false,
+                ColumnCount = 1,
+                RowCount = recentItems.Count > 0 ? recentItems.Count : 1,
                 BackColor = Color.Transparent
             };
+            list.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
-            foreach (var item in dashboard.RecentSubmissions.Take(5))
+            if (recentItems.Count > 0)
             {
-                list.Controls.Add(CreateRecentResultRow(item));
-            }
-
-            if (list.Controls.Count == 0)
-            {
-                list.Controls.Add(new Label
+                var rowHeightPercent = 100F / recentItems.Count;
+                for (var i = 0; i < recentItems.Count; i++)
                 {
-                    AutoSize = false,
-                    Width = 280,
-                    Height = 28,
-                    Font = new Font("Segoe UI", 9.5F),
+                    list.RowStyles.Add(new RowStyle(SizeType.Percent, rowHeightPercent));
+                    list.Controls.Add(CreateRecentResultRow(recentItems[i]), 0, i);
+                }
+            }
+            else
+            {
+                list.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+                var empty = new Label
+                {
+                    Dock = DockStyle.Fill,
+                    Font = AppTheme.GetBodyFont(9.5F),
                     ForeColor = DashboardMuted,
-                    Text = "No recent results yet."
-                });
+                    Text = "No recent results yet.",
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                list.Controls.Add(empty, 0, 0);
             }
 
             panel.Controls.Add(list);
@@ -726,21 +644,39 @@ namespace QuizGenAI.Forms.Teacher
         {
             var row = new Panel
             {
-                Width = 320,
-                Height = 36,
-                Margin = new Padding(0, 0, 0, 10),
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 0, 8),
                 BackColor = Color.Transparent
             };
 
             row.Controls.Add(CreateScorePill(item.ScorePercentage));
-            row.Controls.Add(new Label
+            var textHost = new Panel
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = DashboardMuted,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 2, 8, 2)
+            };
+
+            textHost.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = AppTheme.GetBodyFont(11F, FontStyle.Bold),
+                ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Text = string.Format("{0}\n{1}", item.StudentName, item.QuizTitle)
+                Text = item.StudentName
             });
+
+            textHost.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = AppTheme.GetBodyFont(10.5F),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = item.QuizTitle
+            });
+
+            row.Controls.Add(textHost);
 
             return row;
         }
@@ -758,105 +694,12 @@ namespace QuizGenAI.Forms.Teacher
             pill.Controls.Add(new Label
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold),
+                Font = AppTheme.GetBodyFont(8.5F, FontStyle.Bold),
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Text = score.ToString("0.#") + "%"
             });
             return pill;
-        }
-
-        private Control CreateQuizPreviewCard(QuizListItemDto quiz, int index)
-        {
-            var card = CreateDashboardCardPanel();
-            card.Height = 122;
-            card.Margin = new Padding(index == 2 ? 0 : 0, 0, index == 2 ? 0 : 16, 0);
-            card.Padding = new Padding(16, 12, 16, 12);
-
-            if (quiz == null)
-            {
-                card.Controls.Add(new Label
-                {
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 10F),
-                    ForeColor = DashboardMuted,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Text = "No quiz available"
-                });
-                return card;
-            }
-
-            var badges = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 24,
-                BackColor = Color.Transparent
-            };
-            badges.Controls.Add(CreateBadge(quiz.Status.ToString(), DockStyle.Right, GetStatusColor(quiz.Status)));
-            badges.Controls.Add(CreateBadge(quiz.SubjectName, DockStyle.Left, Color.FromArgb(72, 132, 191, 88)));
-
-            card.Controls.Add(new Label
-            {
-                Dock = DockStyle.Bottom,
-                Height = 18,
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = DashboardMuted,
-                Text = string.Format("{0} questions                        {1}", quiz.QuestionCount, quiz.Difficulty)
-            });
-            card.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 18,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = DashboardMuted,
-                Text = quiz.Topic
-            });
-            card.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 44,
-                Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold),
-                ForeColor = DashboardText,
-                Text = quiz.Title
-            });
-            card.Controls.Add(badges);
-
-            return card;
-        }
-
-        private static Panel CreateBadge(string text, DockStyle dock, Color color)
-        {
-            var host = new Panel
-            {
-                Dock = dock,
-                Width = Math.Max(72, text.Length * 7 + 18),
-                BackColor = color,
-                Padding = new Padding(0),
-                Margin = new Padding(0, 0, 8, 0)
-            };
-            host.Paint += DashboardMiniPanel_Paint;
-            host.Controls.Add(new Label
-            {
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI Semibold", 8F, FontStyle.Bold),
-                ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Text = text
-            });
-            return host;
-        }
-
-        private static Color GetStatusColor(QuizStatus status)
-        {
-            switch (status)
-            {
-                case QuizStatus.Published:
-                    return Color.FromArgb(24, 105, 72);
-                case QuizStatus.Draft:
-                    return Color.FromArgb(145, 108, 35);
-                default:
-                    return Color.FromArgb(92, 104, 119);
-            }
         }
 
         private static Panel CreateDashboardCardHeader(string title)
@@ -871,7 +714,7 @@ namespace QuizGenAI.Forms.Teacher
             header.Controls.Add(new Label
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
+                Font = AppTheme.GetTitleFont(12F),
                 ForeColor = DashboardText,
                 Text = title,
                 TextAlign = ContentAlignment.MiddleLeft

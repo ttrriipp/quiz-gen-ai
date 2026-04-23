@@ -52,6 +52,7 @@ namespace QuizGenAI.Forms.Student
         public StudentQuizzesForm()
         {
             InitializeComponent();
+            DoubleBuffered = true;
             if (DesignTimeHelper.IsInDesignMode(this))
             {
                 return;
@@ -1202,7 +1203,8 @@ namespace QuizGenAI.Forms.Student
                 BackColor = ReportsCardBg,
                 BorderStyle = BorderStyle.None,
                 Margin = new Padding(0, 0, 18, 18),
-                Padding = new Padding(22, 22, 22, 20)
+                Padding = new Padding(22, 22, 22, 20),
+                Tag = AppTheme.SkipCognitaThemeTag
             };
             panel.Paint += RoundedInsetRow_Paint;
 
@@ -1269,7 +1271,7 @@ namespace QuizGenAI.Forms.Student
                 Width = contentWidth,
                 Height = 34,
                 FillColor = quiz.CanStart ? ReportsMustard : ReportsInnerBg,
-                ForeColor = quiz.CanStart ? ReportsWorkspaceBg : ReportsTextMuted,
+                ForeColor = quiz.CanStart ? Color.Black : ReportsTextMuted,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
                 Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
                 Cursor = Cursors.Hand,
@@ -1529,9 +1531,9 @@ namespace QuizGenAI.Forms.Student
         {
             var label = new Label
             {
-                AutoSize = true,
+                AutoSize = false,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                ForeColor = rightAligned ? ReportsWorkspaceBg : ReportsTextPrimary,
+                ForeColor = rightAligned ? Color.Black : ReportsTextPrimary,
                 BackColor = Color.Transparent,
                 Text = string.IsNullOrWhiteSpace(text) ? "General" : text,
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -1544,7 +1546,8 @@ namespace QuizGenAI.Forms.Student
                 Width = Math.Max(92, Math.Min(180, size.Width + 28)),
                 Height = 32,
                 BackColor = rightAligned ? ReportsMustard : ReportsInnerBg,
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                Tag = AppTheme.SkipCognitaThemeTag
             };
             panel.Paint += PillBorder_Paint;
 

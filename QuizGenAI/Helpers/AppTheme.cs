@@ -54,6 +54,18 @@ namespace QuizGenAI.Helpers
             HookControlAdded(form);
         }
 
+        public static Font GetBodyFont(float size, FontStyle style = FontStyle.Regular)
+        {
+            EnsureBundledFontsLoaded();
+            return CreatePreferredFont(BodyFontFamilyName, "Segoe UI", size, style);
+        }
+
+        public static Font GetTitleFont(float size, FontStyle style = FontStyle.Bold)
+        {
+            EnsureBundledFontsLoaded();
+            return CreatePreferredFont(TitleFontFamilyName, "Segoe UI", size, style);
+        }
+
         private static void HookControlAdded(Control parent)
         {
             parent.ControlAdded -= Parent_ControlAdded;

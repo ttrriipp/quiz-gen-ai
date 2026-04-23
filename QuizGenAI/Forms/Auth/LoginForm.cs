@@ -20,6 +20,7 @@ namespace QuizGenAI.Forms.Auth
         public LoginForm()
         {
             InitializeComponent();
+            ApplyLoginFonts();
             if (DesignTimeHelper.IsInDesignMode(this))
             {
                 return;
@@ -34,6 +35,23 @@ namespace QuizGenAI.Forms.Auth
 
             WireFieldFocus(txtEmail, pnlEmailWrap);
             WireFieldFocus(txtPassword, pnlPasswordWrap);
+        }
+
+        private void ApplyLoginFonts()
+        {
+            Font = AppTheme.GetBodyFont(10F);
+            lblBrand.Font = AppTheme.GetTitleFont(20F);
+            lblTagline1.Font = AppTheme.GetTitleFont(11.25F);
+            lblTaglineGold.Font = AppTheme.GetTitleFont(11.25F);
+            lblTagline2.Font = AppTheme.GetTitleFont(11.25F);
+            lblBadge.Font = AppTheme.GetBodyFont(8.25F, FontStyle.Bold);
+            lblSubtitle.Font = AppTheme.GetBodyFont(9F);
+            lblEmail.Font = AppTheme.GetBodyFont(9F);
+            lblPassword.Font = AppTheme.GetBodyFont(9F);
+            txtEmail.Font = AppTheme.GetBodyFont(10F);
+            txtPassword.Font = AppTheme.GetBodyFont(10F);
+            btnLogin.Font = AppTheme.GetBodyFont(10.5F, FontStyle.Bold);
+            lblHint.Font = AppTheme.GetBodyFont(8.25F);
         }
 
         private void LoginForm_Load(object sender, EventArgs e)
