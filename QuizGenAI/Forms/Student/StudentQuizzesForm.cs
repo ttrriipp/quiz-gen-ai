@@ -1268,12 +1268,12 @@ namespace QuizGenAI.Forms.Student
             var btnStart = new Guna2Button
             {
                 Location = new Point(paddingX, 186),
-                Width = contentWidth,
+                Width = quiz.HasCompletedAttempt ? ((contentWidth - 10) / 2) : contentWidth,
                 Height = 34,
                 FillColor = quiz.CanStart ? ReportsMustard : ReportsInnerBg,
                 ForeColor = quiz.CanStart ? Color.Black : ReportsTextMuted,
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                Text = quiz.CanStart ? "Start Quiz" : "Unavailable",
+                Text = quiz.CanStart ? "Start Quiz" : (quiz.HasCompletedAttempt ? "Completed" : "Unavailable"),
                 Cursor = Cursors.Hand,
                 Enabled = true,
                 Tag = quiz
@@ -1287,6 +1287,27 @@ namespace QuizGenAI.Forms.Student
             btnStart.Click += StartQuiz_Click;
 
             panel.Controls.Add(btnStart);
+            if (quiz.HasCompletedAttempt)
+            {
+                var btnReview = new Guna2Button
+                {
+                    Location = new Point(paddingX + btnStart.Width + 10, 186),
+                    Width = contentWidth - btnStart.Width - 10,
+                    Height = 34,
+                    FillColor = Color.FromArgb(22, 88, 61),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                    Text = "Review Answers",
+                    Cursor = Cursors.Hand,
+                    Enabled = true,
+                    Tag = quiz
+                };
+                btnReview.BorderRadius = 10;
+                btnReview.BorderThickness = 1;
+                btnReview.BorderColor = ReportsBorder;
+                btnReview.Click += ReviewAnswers_Click;
+                panel.Controls.Add(btnReview);
+            }
             panel.Controls.Add(lblAvailability);
             panel.Controls.Add(lblMeta);
             panel.Controls.Add(lblTopic);
@@ -1332,6 +1353,30 @@ namespace QuizGenAI.Forms.Student
             {
                 LoggingService.Error(ex, "Unable to start quiz. QuizId={QuizId} StudentId={StudentId}", quiz.Id, _currentUserId);
                 NotificationHelper.ShowError(this, "Unable To Start Quiz", ex.Message);
+            }
+        }
+
+        private void ReviewAnswers_Click(object sender, EventArgs e)
+        {
+            var button = sender as Control;
+            var quiz = button != null ? button.Tag as StudentQuizListItemDto : null;
+            if (quiz == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var review = _examService.GetAttemptReview(_currentUserId, quiz.Id);
+                using (var reviewForm = new StudentAttemptReviewForm(review))
+                {
+                    reviewForm.Text = string.Format("Review Answers - {0}", review.QuizTitle);
+                    reviewForm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationHelper.ShowError(this, "Unable To Load Review", ex.Message);
             }
         }
 

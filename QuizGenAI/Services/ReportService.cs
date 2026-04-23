@@ -178,7 +178,9 @@ namespace QuizGenAI.Services
                     PublishedQuizzes = quizzes.Count(x => x.Status == QuizStatus.Published),
                     DraftQuizzes = quizzes.Count(x => x.Status == QuizStatus.Draft),
                     ArchivedQuizzes = quizzes.Count(x => x.Status == QuizStatus.Archived),
-                    SubmittedAttempts = submittedAttempts.Count
+                    SubmittedAttempts = submittedAttempts.Count,
+                    PassCount = submittedAttempts.Count(x => (x.ScorePercentage ?? 0) >= 75),
+                    FailCount = submittedAttempts.Count(x => (x.ScorePercentage ?? 0) < 75)
                 };
 
                 dashboard.RecentSubmissions = submittedAttempts

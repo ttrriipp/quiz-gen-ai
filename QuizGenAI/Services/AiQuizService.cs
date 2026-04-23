@@ -100,10 +100,22 @@ namespace QuizGenAI.Services
                         var details = string.IsNullOrWhiteSpace(responseContent)
                             ? "No response body was returned."
                             : responseContent;
+                        var statusCode = (int)response.StatusCode;
+                        var hasLeakedKeySignal = !string.IsNullOrWhiteSpace(responseContent) &&
+                            responseContent.IndexOf("leaked", StringComparison.OrdinalIgnoreCase) >= 0;
 
                         if (isTransient)
                         {
                             LoggingService.Warning("AI service remained unavailable after retries. Falling back to local generator. StatusCode={StatusCode}", response.StatusCode);
+                            return BuildFallbackResult(request, prompt);
+                        }
+
+                        if (statusCode == 401 || statusCode == 403 || hasLeakedKeySignal)
+                        {
+                            LoggingService.Warning(
+                                "AI request rejected (StatusCode={StatusCode}). Using fallback generator. Details={Details}",
+                                response.StatusCode,
+                                details);
                             return BuildFallbackResult(request, prompt);
                         }
 

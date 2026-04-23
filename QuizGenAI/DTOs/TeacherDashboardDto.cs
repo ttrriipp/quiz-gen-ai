@@ -18,6 +18,8 @@ namespace QuizGenAI.DTOs
         public int DraftQuizzes { get; set; }
         public int ArchivedQuizzes { get; set; }
         public int SubmittedAttempts { get; set; }
+        public int PassCount { get; set; }
+        public int FailCount { get; set; }
         public List<RecentSubmissionDto> RecentSubmissions { get; set; }
         public List<QuizStatusBreakdownDto> StatusBreakdown { get; set; }
         public List<SubjectPerformanceDto> SubjectPerformance { get; set; }

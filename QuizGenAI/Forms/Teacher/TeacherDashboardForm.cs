@@ -311,7 +311,6 @@ namespace QuizGenAI.Forms.Teacher
             ClearHostedContentView();
             _contentHost.Controls.Clear();
             var dashboard = _reportService.GetTeacherDashboard();
-            var reports = _reportService.GetTeacherReports();
 
             var root = new TableLayoutPanel
             {
@@ -329,7 +328,7 @@ namespace QuizGenAI.Forms.Teacher
 
             root.Controls.Add(CreateDashboardWelcomeHeader(), 0, 0);
             root.Controls.Add(CreateDashboardStatsRow(dashboard), 0, 1);
-            root.Controls.Add(CreateDashboardAnalyticsRow(reports), 0, 2);
+            root.Controls.Add(CreateDashboardAnalyticsRow(dashboard), 0, 2);
             root.Controls.Add(CreateDashboardPerformanceRow(dashboard), 0, 3);
             _contentHost.Controls.Add(root);
         }
@@ -420,7 +419,7 @@ namespace QuizGenAI.Forms.Teacher
             return row;
         }
 
-        private Control CreateDashboardAnalyticsRow(TeacherReportsDto reports)
+        private Control CreateDashboardAnalyticsRow(TeacherDashboardDto dashboard)
         {
             var row = new TableLayoutPanel
             {
@@ -431,7 +430,7 @@ namespace QuizGenAI.Forms.Teacher
                 BackColor = Color.Transparent
             };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            row.Controls.Add(CreatePassFailCard(reports), 0, 0);
+            row.Controls.Add(CreatePassFailCard(dashboard), 0, 0);
             return row;
         }
 
@@ -492,7 +491,7 @@ namespace QuizGenAI.Forms.Teacher
             return panel;
         }
 
-        private Panel CreatePassFailCard(TeacherReportsDto reports)
+        private Panel CreatePassFailCard(TeacherDashboardDto dashboard)
         {
             var panel = CreateDashboardCardPanel();
             panel.Height = 228;
@@ -533,8 +532,8 @@ namespace QuizGenAI.Forms.Teacher
             };
             series["DoughnutRadius"] = "72";
             series["PieLabelStyle"] = "Inside";
-            series.Points.AddXY("Pass", Math.Max(0, reports.PassCount));
-            series.Points.AddXY("Fail", Math.Max(0, reports.FailCount));
+            series.Points.AddXY("Pass", Math.Max(0, dashboard.PassCount));
+            series.Points.AddXY("Fail", Math.Max(0, dashboard.FailCount));
             series.Points[0].Label = "Pass";
             series.Points[1].Label = "Fail";
             series.Points[0].Color = Color.FromArgb(24, 105, 72);
@@ -550,8 +549,8 @@ namespace QuizGenAI.Forms.Teacher
                 WrapContents = false,
                 BackColor = Color.Transparent
             };
-            legend.Controls.Add(CreateLegendChip(Color.FromArgb(24, 105, 72), string.Format("Pass ({0})", reports.PassCount)));
-            legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", reports.FailCount)));
+            legend.Controls.Add(CreateLegendChip(Color.FromArgb(24, 105, 72), string.Format("Pass ({0})", dashboard.PassCount)));
+            legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", dashboard.FailCount)));
 
             panel.Controls.Add(legend);
             chartHost.Controls.Add(chart);

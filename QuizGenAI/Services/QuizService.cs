@@ -51,10 +51,22 @@ namespace QuizGenAI.Services
                             .Where(a => a.StudentId == studentId)
                             .OrderByDescending(a => a.StartedAt)
                             .ToList();
+                        var hasCompletedAttempt = attempts.Any(a => a.SubmittedAt.HasValue);
+                        var bestSubmittedScore = attempts
+                            .Where(a => a.SubmittedAt.HasValue && a.ScorePercentage.HasValue)
+                            .Select(a => a.ScorePercentage)
+                            .DefaultIfEmpty()
+                            .Max();
 
-                        var canStart =
+                        var withinAvailabilityWindow =
                             (!x.AvailableFrom.HasValue || x.AvailableFrom.Value <= now) &&
                             (!x.AvailableUntil.HasValue || x.AvailableUntil.Value >= now);
+                        var canStart = withinAvailabilityWindow && !hasCompletedAttempt;
+                        var availabilityLabel = hasCompletedAttempt
+                            ? (bestSubmittedScore.HasValue
+                                ? string.Format("Completed - Final score: {0:0.#}%", bestSubmittedScore.Value)
+                                : "Completed - Final score submitted")
+                            : BuildAvailabilityLabel(x.AvailableFrom, x.AvailableUntil, now);
 
                         return new StudentQuizListItemDto
                         {
@@ -68,14 +80,10 @@ namespace QuizGenAI.Services
                             AvailableFrom = x.AvailableFrom,
                             AvailableUntil = x.AvailableUntil,
                             CanStart = canStart,
-                            AvailabilityLabel = BuildAvailabilityLabel(x.AvailableFrom, x.AvailableUntil, now),
+                            AvailabilityLabel = availabilityLabel,
                             AttemptCount = attempts.Count,
-                            HasCompletedAttempt = attempts.Any(a => a.SubmittedAt.HasValue),
-                            BestScore = attempts
-                                .Where(a => a.SubmittedAt.HasValue && a.ScorePercentage.HasValue)
-                                .Select(a => a.ScorePercentage)
-                                .DefaultIfEmpty()
-                                .Max()
+                            HasCompletedAttempt = hasCompletedAttempt,
+                            BestScore = bestSubmittedScore
                         };
                     })
                     .ToList();

@@ -12,6 +12,7 @@ namespace QuizGenAI.Forms.Teacher
 {
     public partial class AiQuizGeneratorForm : Form
     {
+        private const long MaxSourceDocumentBytes = 10L * 1024L * 1024L;
         private readonly AiQuizService _aiQuizService;
         private readonly QuizService _quizService;
         private readonly DocumentTextExtractionService _documentTextExtractionService;
@@ -27,6 +28,7 @@ namespace QuizGenAI.Forms.Teacher
         private Button _btnAttachDocument;
         private Button _btnClearDocument;
         private ProgressBar _prgDocumentLoading;
+        private ToolTip _documentStatusToolTip;
         private string _selectedDocumentPath;
         private string _selectedDocumentText;
 
@@ -37,6 +39,7 @@ namespace QuizGenAI.Forms.Teacher
             _aiQuizService = new AiQuizService();
             _quizService = new QuizService();
             _documentTextExtractionService = new DocumentTextExtractionService();
+            _documentStatusToolTip = new ToolTip();
             BuildLayout();
             AppTheme.ApplyCognitaTheme(this);
         }
@@ -163,17 +166,20 @@ namespace QuizGenAI.Forms.Teacher
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(107, 114, 128),
                 Margin = new Padding(0, 8, 0, 0),
-                Text = "Attach PDF, DOCX, or DOC files to generate questions from source material. If no AI endpoint is configured, the app uses a demo fallback generator."
+                Text = string.Format("Attach PDF, DOCX, or DOC files (max {0}) to generate questions from source material. If no AI endpoint is configured, the app uses a demo fallback generator.", FormatFileSize(MaxSourceDocumentBytes))
             };
 
             _lblDocumentStatus = new Label
             {
-                AutoSize = true,
-                MaximumSize = new Size(430, 0),
+                AutoSize = false,
+                Width = 440,
+                Height = 34,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(75, 85, 99),
-                Margin = new Padding(0, 9, 0, 0),
-                Text = "No document attached."
+                Margin = new Padding(0, 0, 0, 0),
+                Text = "No document attached.",
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
             };
 
             layout.Controls.Add(CreateFieldLabel("Subject"), 0, 0);
@@ -325,7 +331,7 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
+                WrapContents = false,
                 Margin = new Padding(0, 6, 0, 6)
             };
 
@@ -341,6 +347,7 @@ namespace QuizGenAI.Forms.Teacher
                 _selectedDocumentPath = null;
                 _selectedDocumentText = null;
                 _lblDocumentStatus.Text = "No document attached.";
+                _documentStatusToolTip.SetToolTip(_lblDocumentStatus, _lblDocumentStatus.Text);
             };
 
             _prgDocumentLoading = new ProgressBar
@@ -377,10 +384,21 @@ namespace QuizGenAI.Forms.Teacher
 
                     SetDocumentLoading(true);
                     var selectedFile = dialog.FileName;
+                    var fileInfo = new FileInfo(selectedFile);
+                    if (fileInfo.Length > MaxSourceDocumentBytes)
+                    {
+                        throw new InvalidOperationException(
+                            string.Format(
+                                "The selected file is {0}. Maximum allowed size is {1}.",
+                                FormatFileSize(fileInfo.Length),
+                                FormatFileSize(MaxSourceDocumentBytes)));
+                    }
+
                     var extracted = await Task.Run(() => _documentTextExtractionService.ExtractText(selectedFile));
                     _selectedDocumentPath = dialog.FileName;
                     _selectedDocumentText = extracted;
                     _lblDocumentStatus.Text = string.Format("Attached: {0} ({1} chars)", Path.GetFileName(dialog.FileName), extracted.Length);
+                    _documentStatusToolTip.SetToolTip(_lblDocumentStatus, _lblDocumentStatus.Text);
                 }
             }
             catch (Exception ex)
@@ -388,6 +406,7 @@ namespace QuizGenAI.Forms.Teacher
                 _selectedDocumentPath = null;
                 _selectedDocumentText = null;
                 _lblDocumentStatus.Text = "No document attached.";
+                _documentStatusToolTip.SetToolTip(_lblDocumentStatus, _lblDocumentStatus.Text);
                 LoggingService.Error(ex, "Failed to attach source document.");
                 MessageBox.Show(
                     this,
@@ -443,6 +462,21 @@ namespace QuizGenAI.Forms.Teacher
                 Width = 110,
                 Margin = new Padding(0)
             };
+        }
+
+        private static string FormatFileSize(long bytes)
+        {
+            if (bytes < 1024)
+            {
+                return string.Format("{0} B", bytes);
+            }
+
+            if (bytes < 1024 * 1024)
+            {
+                return string.Format("{0:0.#} KB", bytes / 1024D);
+            }
+
+            return string.Format("{0:0.#} MB", bytes / (1024D * 1024D));
         }
 
         private static Button CreatePrimaryButton(string text)

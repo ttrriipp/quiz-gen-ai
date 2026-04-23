@@ -27,6 +27,13 @@ namespace QuizGenAI.Services
 
                 ValidateStudentCanAccessQuiz(quiz);
 
+                var hasSubmittedAttempt = context.StudentAttempts
+                    .Any(x => x.StudentId == studentId && x.QuizId == quizId && x.SubmittedAt.HasValue);
+                if (hasSubmittedAttempt)
+                {
+                    throw new InvalidOperationException("You have already completed this quiz. Your submitted score is final.");
+                }
+
                 var existingAttempt = context.StudentAttempts
                     .Include(x => x.Answers)
                     .Where(x => x.StudentId == studentId && x.QuizId == quizId && !x.SubmittedAt.HasValue)
@@ -273,6 +280,75 @@ namespace QuizGenAI.Services
                     TimeSpentDisplay = FormatDuration(attempt.TimeSpentSeconds),
                     WasAutoSubmitted = attempt.TimeSpentSeconds >= (attempt.Quiz != null ? attempt.Quiz.DurationMinutes * 60 : int.MaxValue)
                 };
+            }
+        }
+
+        public StudentAttemptReviewDto GetAttemptReview(int studentId, int quizId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                var attempt = context.StudentAttempts
+                    .Include(x => x.Quiz.Subject)
+                    .Include(x => x.Quiz.Questions.Select(q => q.Choices))
+                    .Include(x => x.Answers)
+                    .Where(x => x.StudentId == studentId && x.QuizId == quizId && x.SubmittedAt.HasValue)
+                    .OrderByDescending(x => x.SubmittedAt)
+                    .FirstOrDefault();
+
+                if (attempt == null)
+                {
+                    throw new InvalidOperationException("No submitted attempt found for this quiz.");
+                }
+
+                var review = new StudentAttemptReviewDto
+                {
+                    AttemptId = attempt.Id,
+                    QuizTitle = attempt.Quiz != null ? attempt.Quiz.Title : "Quiz",
+                    SubjectName = attempt.Quiz != null && attempt.Quiz.Subject != null ? attempt.Quiz.Subject.Name : "Unknown Subject",
+                    Topic = attempt.Quiz != null ? attempt.Quiz.Topic : string.Empty,
+                    ScorePercentage = Math.Round(attempt.ScorePercentage ?? 0, 1),
+                    SubmittedAtDisplay = attempt.SubmittedAt.HasValue ? FormatStoredLocalForDisplay(attempt.SubmittedAt.Value) : "Pending"
+                };
+
+                if (attempt.Quiz == null || attempt.Quiz.Questions == null)
+                {
+                    return review;
+                }
+
+                review.Questions = attempt.Quiz.Questions
+                    .OrderBy(x => x.OrderIndex)
+                    .Select(x =>
+                    {
+                        var selectedChoiceId = attempt.Answers
+                            .Where(a => a.QuestionId == x.Id)
+                            .Select(a => a.SelectedChoiceId)
+                            .FirstOrDefault();
+
+                        var correctChoiceId = x.Choices
+                            .Where(c => c.IsCorrect)
+                            .Select(c => (int?)c.Id)
+                            .FirstOrDefault();
+
+                        return new StudentAttemptReviewQuestionDto
+                        {
+                            QuestionId = x.Id,
+                            OrderIndex = x.OrderIndex,
+                            QuestionText = x.Text,
+                            SelectedChoiceId = selectedChoiceId,
+                            CorrectChoiceId = correctChoiceId,
+                            Choices = x.Choices
+                                .OrderBy(c => c.OrderIndex)
+                                .Select(c => new StudentAttemptReviewChoiceDto
+                                {
+                                    ChoiceId = c.Id,
+                                    Text = c.Text
+                                })
+                                .ToList()
+                        };
+                    })
+                    .ToList();
+
+                return review;
             }
         }
 
