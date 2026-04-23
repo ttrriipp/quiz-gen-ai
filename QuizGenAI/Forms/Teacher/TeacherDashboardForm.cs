@@ -77,7 +77,7 @@ namespace QuizGenAI.Forms.Teacher
             FormBorderStyle = FormBorderStyle.None;
             WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Teacher Dashboard";
+            Text = "Teacher Panel";
 
             var sidebar = new Panel
             {
@@ -212,7 +212,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                Padding = new Padding(20, 16, 20, 20),
+                Padding = new Padding(24, 6, 24, 20),
                 BackColor = MainWorkspaceGreen
             };
 
@@ -352,7 +352,7 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 1,
-                Margin = new Padding(0, 2, 0, 12),
+                Margin = new Padding(0, 0, 0, 8),
                 BackColor = Color.Transparent
             };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -361,23 +361,14 @@ namespace QuizGenAI.Forms.Teacher
             var textHost = new Panel
             {
                 Dock = DockStyle.Fill,
-                Height = 88,
+                Height = 74,
                 BackColor = Color.Transparent
-            };
-
-            var lblSection = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI Semibold", 8.8F, FontStyle.Bold),
-                ForeColor = DashboardMuted,
-                Text = "TEACHER DASHBOARD"
             };
 
             var lblTitle = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 46,
+                Height = 42,
                 Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
                 ForeColor = DashboardText,
                 Text = string.Format("Welcome back, {0}", DisplayName)
@@ -392,7 +383,6 @@ namespace QuizGenAI.Forms.Teacher
                 Text = "Here is what is happening across your quizzes today."
             };
 
-            textHost.Controls.Add(lblSection);
             textHost.Controls.Add(lblTitle);
             textHost.Controls.Add(lblSubtitle);
 
@@ -538,24 +528,24 @@ namespace QuizGenAI.Forms.Teacher
         private Panel CreateDashboardStatCard(string title, string value, string note, bool highlighted)
         {
             var panel = CreateDashboardCardPanel();
-            panel.Height = 92;
+            panel.Height = 100;
             panel.Margin = new Padding(0, 0, 16, 0);
-            panel.Padding = new Padding(18, 14, 18, 14);
+            panel.Padding = new Padding(18, 12, 18, 12);
             panel.BackColor = highlighted ? DashboardCardStrong : DashboardCard;
 
             panel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
                 Height = 18,
-                Font = new Font("Segoe UI", 8.5F),
+                Font = new Font("Segoe UI", 8.8F),
                 ForeColor = highlighted ? Color.FromArgb(232, 242, 232) : DashboardMuted,
-                Text = title.ToUpperInvariant()
+                Text = note
             });
 
             panel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
-                Height = 44,
+                Height = 48,
                 Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
                 ForeColor = DashboardText,
                 Text = value
@@ -565,9 +555,9 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Top,
                 Height = 18,
-                Font = new Font("Segoe UI", 8.8F),
+                Font = new Font("Segoe UI", 8.5F),
                 ForeColor = highlighted ? Color.FromArgb(228, 238, 228) : DashboardMuted,
-                Text = note
+                Text = title.ToUpperInvariant()
             });
 
             return panel;

@@ -60,7 +60,7 @@ namespace QuizGenAI.Forms.Teacher
             Controls.Clear();
 
             BackColor = Color.FromArgb(245, 247, 250);
-            Font = new Font("Segoe UI", 10F);
+            Font = new Font("Segoe UI", 12F);
             FormBorderStyle = FormBorderStyle.None;
             WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterParent;
@@ -104,7 +104,7 @@ namespace QuizGenAI.Forms.Teacher
 
             var metaPanel = CreateSurfacePanel();
             metaPanel.Dock = DockStyle.Top;
-            metaPanel.Height = 170;
+            metaPanel.Height = 190;
             metaPanel.Padding = new Padding(18);
 
             var metaLayout = new TableLayoutPanel
@@ -117,22 +117,23 @@ namespace QuizGenAI.Forms.Teacher
             metaLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             metaLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95F));
             metaLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
-            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
-            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
 
-            _txtTitle = new TextBox { Dock = DockStyle.Fill };
-            _txtTopic = new TextBox { Dock = DockStyle.Fill };
-            _cmbSubject = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cmbDifficulty = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+            _txtTitle = CreateEditorTextBox();
+            _txtTopic = CreateEditorTextBox();
+            _cmbSubject = CreateEditorComboBox(true, DockStyle.Fill);
+            _cmbDifficulty = CreateEditorComboBox(true, DockStyle.Fill);
             _nudDuration = new NumericUpDown
             {
                 Dock = DockStyle.Left,
                 Width = 120,
                 Minimum = 0,
                 Maximum = 300,
-                Value = 20
+                Value = 20,
+                Font = new Font("Segoe UI", 11F)
             };
 
             metaLayout.Controls.Add(CreateFieldLabel("Title"), 0, 0);
@@ -157,7 +158,7 @@ namespace QuizGenAI.Forms.Teacher
                 RowCount = 1,
                 Margin = new Padding(0, 18, 0, 0)
             };
-            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 420F));
+            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360F));
             editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             editorArea.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -177,7 +178,7 @@ namespace QuizGenAI.Forms.Teacher
             _lstQuestions = new ListBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 10F),
+                Font = new Font("Segoe UI", 11F),
                 IntegralHeight = false,
                 HorizontalScrollbar = true
             };
@@ -197,11 +198,12 @@ namespace QuizGenAI.Forms.Teacher
             var btnRemove = new Button
             {
                 Text = "Remove",
-                Width = 92,
-                Height = 34,
+                Width = 104,
+                Height = 38,
                 Location = new Point(138, 4),
                 FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10.5F)
             };
             btnRemove.Click += delegate { RemoveSelectedQuestion(); };
 
@@ -229,27 +231,28 @@ namespace QuizGenAI.Forms.Teacher
                 ColumnCount = 2,
                 RowCount = 9
             };
-            questionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120F));
+            questionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140F));
             questionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 220F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 190F));
             questionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
 
-            _txtQuestionText = new TextBox { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical };
-            _txtChoiceA = new TextBox { Dock = DockStyle.Fill };
-            _txtChoiceB = new TextBox { Dock = DockStyle.Fill };
-            _txtChoiceC = new TextBox { Dock = DockStyle.Fill };
-            _txtChoiceD = new TextBox { Dock = DockStyle.Fill };
-            _cmbCorrectChoice = new ComboBox { Dock = DockStyle.Left, Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
+            _txtQuestionText = CreateEditorTextBox(true);
+            _txtChoiceA = CreateEditorTextBox();
+            _txtChoiceB = CreateEditorTextBox();
+            _txtChoiceC = CreateEditorTextBox();
+            _txtChoiceD = CreateEditorTextBox();
+            _cmbCorrectChoice = CreateEditorComboBox(true, DockStyle.Left);
+            _cmbCorrectChoice.Width = 190;
             _cmbCorrectChoice.Items.AddRange(new object[] { "Choice A", "Choice B", "Choice C", "Choice D" });
             _cmbCorrectChoice.SelectedIndex = 0;
-            _txtExplanation = new TextBox { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical };
+            _txtExplanation = CreateEditorTextBox(true);
             _lblQuestionHint = CreateHintLabel("Select an existing question to edit it or start a new one.");
 
             questionLayout.Controls.Add(CreateFieldLabel("Question"), 0, 0);
@@ -304,11 +307,12 @@ namespace QuizGenAI.Forms.Teacher
             var btnCancel = new Button
             {
                 Text = "Cancel",
-                Width = 92,
-                Height = 34,
+                Width = 104,
+                Height = 38,
                 Location = new Point(136, 6),
                 FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10.5F)
             };
             btnCancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 
@@ -606,7 +610,7 @@ namespace QuizGenAI.Forms.Teacher
             {
                 Dock = DockStyle.Fill,
                 AutoSize = false,
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(107, 114, 128),
                 TextAlign = ContentAlignment.TopLeft,
                 Text = text
@@ -627,15 +631,36 @@ namespace QuizGenAI.Forms.Teacher
             var button = new Button
             {
                 Text = text,
-                Height = 34,
+                Height = 38,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(15, 118, 110),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             button.FlatAppearance.BorderSize = 0;
             return button;
+        }
+
+        private static TextBox CreateEditorTextBox(bool multiline = false)
+        {
+            return new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Multiline = multiline,
+                ScrollBars = multiline ? ScrollBars.Vertical : ScrollBars.None,
+                Font = new Font("Segoe UI", 12F)
+            };
+        }
+
+        private static ComboBox CreateEditorComboBox(bool dropDownList, DockStyle dockStyle)
+        {
+            return new ComboBox
+            {
+                Dock = dockStyle,
+                DropDownStyle = dropDownList ? ComboBoxStyle.DropDownList : ComboBoxStyle.DropDown,
+                Font = new Font("Segoe UI", 12F)
+            };
         }
     }
 }

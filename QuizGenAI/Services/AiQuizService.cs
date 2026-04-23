@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,11 +24,12 @@ namespace QuizGenAI.Services
             var apiKey = ConfigurationManager.AppSettings["AiApiKey"];
 
             LoggingService.Information(
-                "AI quiz generation started. Subject={Subject} Topic={Topic} Difficulty={Difficulty} QuestionCount={QuestionCount}",
+                "AI quiz generation started. Subject={Subject} Topic={Topic} Difficulty={Difficulty} QuestionCount={QuestionCount} SourceDocument={SourceDocument}",
                 request.SubjectName,
                 request.Topic,
                 request.Difficulty,
-                request.QuestionCount);
+                request.QuestionCount,
+                request.SourceDocumentFileName ?? "none");
 
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
@@ -65,15 +67,46 @@ namespace QuizGenAI.Services
                 }
 
                 var json = JsonConvert.SerializeObject(payload);
-                using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
-                using (var response = await client.PostAsync(baseUrl.Trim(), content).ConfigureAwait(false))
+                const int maxAttempts = 3;
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(responseContent))
+                    using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
+                    using (var response = await client.PostAsync(baseUrl.Trim(), content).ConfigureAwait(false))
                     {
+                        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        if (response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(responseContent))
+                        {
+                            var normalizedQuestions = ParseQuestions(responseContent);
+                            LoggingService.Information("AI quiz generation completed successfully. Provider={Provider} QuestionCount={QuestionCount}", "Configured AI API", normalizedQuestions.Count);
+                            return BuildResultFromQuestions(request, prompt, responseContent, normalizedQuestions, "Configured AI API", "external");
+                        }
+
+                        var isTransient = response.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                                          (int)response.StatusCode == 429 ||
+                                          response.StatusCode == HttpStatusCode.BadGateway ||
+                                          response.StatusCode == HttpStatusCode.GatewayTimeout;
+
+                        if (isTransient && attempt < maxAttempts)
+                        {
+                            LoggingService.Warning(
+                                "AI quiz generation transient failure (Attempt {Attempt}/{MaxAttempts}) StatusCode={StatusCode}. Retrying.",
+                                attempt,
+                                maxAttempts,
+                                response.StatusCode);
+                            await Task.Delay(attempt * 1200).ConfigureAwait(false);
+                            continue;
+                        }
+
                         var details = string.IsNullOrWhiteSpace(responseContent)
                             ? "No response body was returned."
                             : responseContent;
+
+                        if (isTransient)
+                        {
+                            LoggingService.Warning("AI service remained unavailable after retries. Falling back to local generator. StatusCode={StatusCode}", response.StatusCode);
+                            return BuildFallbackResult(request, prompt);
+                        }
+
                         LoggingService.Warning("AI quiz generation failed with status code {StatusCode}.", response.StatusCode);
                         throw new InvalidOperationException(
                             string.Format("AI generation failed with status code {0}.{1}{1}{2}",
@@ -81,25 +114,36 @@ namespace QuizGenAI.Services
                                 Environment.NewLine,
                                 details));
                     }
-
-                    var normalizedQuestions = ParseQuestions(responseContent);
-                    LoggingService.Information("AI quiz generation completed successfully. Provider={Provider} QuestionCount={QuestionCount}", "Configured AI API", normalizedQuestions.Count);
-                    return BuildResultFromQuestions(request, prompt, responseContent, normalizedQuestions, "Configured AI API", "external");
                 }
             }
+
+            LoggingService.Warning("AI quiz generation exhausted retries unexpectedly; using fallback generator.");
+            return BuildFallbackResult(request, prompt);
         }
 
         public string BuildPrompt(AiQuizRequestDto request)
         {
-            return string.Format(
+            var prompt = string.Format(
                 "Generate {0} multiple-choice quiz questions for subject '{1}' about topic '{2}'. " +
                 "Difficulty: {3}. Return strict JSON only as an array. " +
                 "Each item must contain questionText, choices, correctAnswer, and explanation. " +
                 "Each question must have exactly 4 choices and exactly 1 correct answer.",
                 request.QuestionCount,
                 request.SubjectName,
-                request.Topic,
+                string.IsNullOrWhiteSpace(request.Topic) ? "General Coverage" : request.Topic.Trim(),
                 request.Difficulty);
+
+            if (!string.IsNullOrWhiteSpace(request.SourceDocumentText))
+            {
+                prompt += string.Format(
+                    " Use the attached source document '{0}' as the primary reference. " +
+                    "Prioritize factual details from this content when building questions.{1}{1}Source content:{1}{2}",
+                    request.SourceDocumentFileName ?? "uploaded-file",
+                    Environment.NewLine,
+                    request.SourceDocumentText.Trim());
+            }
+
+            return prompt;
         }
 
         private static void ValidateRequest(AiQuizRequestDto request)
@@ -114,9 +158,9 @@ namespace QuizGenAI.Services
                 throw new InvalidOperationException("Subject is required.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Topic))
+            if (string.IsNullOrWhiteSpace(request.Topic) && string.IsNullOrWhiteSpace(request.SourceDocumentText))
             {
-                throw new InvalidOperationException("Topic is required.");
+                throw new InvalidOperationException("Topic is required unless a document is attached.");
             }
 
             if (!Enum.IsDefined(typeof(QuizDifficulty), request.Difficulty))
@@ -132,19 +176,20 @@ namespace QuizGenAI.Services
 
         private AiQuizGenerationResultDto BuildFallbackResult(AiQuizRequestDto request, string prompt)
         {
+            var topic = string.IsNullOrWhiteSpace(request.Topic) ? "the attached document topic" : request.Topic.Trim();
             var fallbackQuestions = new List<AiQuizQuestionDto>();
             for (var i = 1; i <= request.QuestionCount; i++)
             {
-                var correct = string.Format("{0} concept {1}", request.Topic.Trim(), i);
+                var correct = string.Format("{0} concept {1}", topic, i);
                 fallbackQuestions.Add(new AiQuizQuestionDto
                 {
-                    QuestionText = string.Format("Which option best describes {0} for {1}?", request.Topic.Trim(), request.SubjectName),
+                    QuestionText = string.Format("Which option best describes {0} for {1}?", topic, request.SubjectName),
                     CorrectAnswer = correct,
-                    Explanation = string.Format("This fallback explanation highlights a core point about {0} at {1} difficulty.", request.Topic.Trim(), request.Difficulty),
+                    Explanation = string.Format("This fallback explanation highlights a core point about {0} at {1} difficulty.", topic, request.Difficulty),
                     Choices = new List<string>
                     {
                         correct,
-                        string.Format("Common misconception about {0}", request.Topic.Trim()),
+                        string.Format("Common misconception about {0}", topic),
                         string.Format("Unrelated idea from {0}", request.SubjectName),
                         string.Format("Incorrect detail for item {0}", i)
                     }
@@ -197,8 +242,7 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Each AI-generated question must contain four choices.");
                 }
 
-                var correctChoice = normalizedChoices.FirstOrDefault(x =>
-                    string.Equals(x.Trim(), (question.CorrectAnswer ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase));
+                var correctChoice = ResolveCorrectChoice(normalizedChoices, question.CorrectAnswer);
 
                 if (string.IsNullOrWhiteSpace(correctChoice))
                 {
@@ -231,6 +275,78 @@ namespace QuizGenAI.Services
                 Provider = provider,
                 ModelName = modelName
             };
+        }
+
+        private static string ResolveCorrectChoice(List<string> normalizedChoices, string rawCorrectAnswer)
+        {
+            var answer = (rawCorrectAnswer ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(answer))
+            {
+                return null;
+            }
+
+            var directMatch = normalizedChoices.FirstOrDefault(x =>
+                string.Equals(x.Trim(), answer, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(directMatch))
+            {
+                return directMatch;
+            }
+
+            // Support AI answers like "B", "2", "Option C", "(d)", etc.
+            var token = RemoveWordIgnoreCase(RemoveWordIgnoreCase(RemoveWordIgnoreCase(answer, "option"), "choice"), "answer")
+                .Replace(":", string.Empty)
+                .Replace("(", string.Empty)
+                .Replace(")", string.Empty)
+                .Trim();
+
+            if (token.Length == 1)
+            {
+                var letter = char.ToUpperInvariant(token[0]);
+                if (letter >= 'A' && letter <= 'D')
+                {
+                    var index = letter - 'A';
+                    if (index >= 0 && index < normalizedChoices.Count)
+                    {
+                        return normalizedChoices[index];
+                    }
+                }
+            }
+
+            if (int.TryParse(token, out var numericIndex))
+            {
+                if (numericIndex >= 1 && numericIndex <= normalizedChoices.Count)
+                {
+                    return normalizedChoices[numericIndex - 1];
+                }
+            }
+
+            // Partial text fallback if AI returns decorated answer text.
+            var partialMatch = normalizedChoices.FirstOrDefault(x =>
+                answer.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (!string.IsNullOrWhiteSpace(partialMatch))
+            {
+                return partialMatch;
+            }
+
+            return null;
+        }
+
+        private static string RemoveWordIgnoreCase(string input, string value)
+        {
+            if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(value))
+            {
+                return input ?? string.Empty;
+            }
+
+            var result = input;
+            var index = result.IndexOf(value, StringComparison.OrdinalIgnoreCase);
+            while (index >= 0)
+            {
+                result = result.Remove(index, value.Length);
+                index = result.IndexOf(value, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return result;
         }
 
         private static List<AiQuizQuestionDto> ParseQuestions(string content)

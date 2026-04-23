@@ -101,6 +101,8 @@
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite, Version=1.0.119.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.119.0\lib\net46\System.Data.SQLite.dll</HintPath>
@@ -282,6 +284,12 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="Assets\Fonts\HostGrotesk-wght.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Assets\Fonts\NotoSans-wdth-wght.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
@@ -295,6 +303,7 @@
     </Compile>
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\AiQuizService.cs" />
+    <Compile Include="Services\DocumentTextExtractionService.cs" />
     <Compile Include="Services\ExamService.cs" />
     <Compile Include="Services\LoggingService.cs" />
     <Compile Include="Services\ResultPdfExportService.cs" />

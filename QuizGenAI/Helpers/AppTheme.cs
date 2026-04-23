@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Drawing.Text;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using Guna.UI2.WinForms;
@@ -22,6 +24,12 @@ namespace QuizGenAI.Helpers
         private static readonly Color PrimaryText = Color.FromArgb(235, 243, 239);
         private static readonly Color SecondaryText = Color.FromArgb(184, 201, 193);
         private static readonly Color Accent = Color.FromArgb(212, 175, 55);
+        private const string TitleFontFamilyName = "Host Grotesk";
+        private const string BodyFontFamilyName = "Noto Sans";
+        private static readonly PrivateFontCollection BundledFonts = new PrivateFontCollection();
+        private static FontFamily _bundledTitleFamily;
+        private static FontFamily _bundledBodyFamily;
+        private static bool _fontsInitialized;
 
         public static void ApplyCognitaTheme(Form form)
         {
@@ -30,9 +38,10 @@ namespace QuizGenAI.Helpers
                 return;
             }
 
+            EnsureBundledFontsLoaded();
             form.BackColor = BaseBackground;
             form.ForeColor = PrimaryText;
-            form.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            form.Font = CreatePreferredFont(BodyFontFamilyName, "Segoe UI", 10F, FontStyle.Regular);
 
             if (!(form.Tag is string) || !string.Equals((string)form.Tag, "theme-gradient", StringComparison.Ordinal))
             {
@@ -112,6 +121,9 @@ namespace QuizGenAI.Helpers
             {
                 label.BackColor = Color.Transparent;
                 label.ForeColor = label.Font.Bold ? PrimaryText : SecondaryText;
+                label.Font = IsTitleLabel(label)
+                    ? CreatePreferredFont(TitleFontFamilyName, label.Font.FontFamily.Name, label.Font.Size, label.Font.Style)
+                    : CreatePreferredFont(BodyFontFamilyName, label.Font.FontFamily.Name, label.Font.Size, label.Font.Style);
                 return;
             }
 
@@ -131,6 +143,7 @@ namespace QuizGenAI.Helpers
                 textBox.BackColor = InputBackground;
                 textBox.ForeColor = PrimaryText;
                 textBox.BorderStyle = BorderStyle.FixedSingle;
+                textBox.Font = CreatePreferredFont(BodyFontFamilyName, textBox.Font.FontFamily.Name, textBox.Font.Size, textBox.Font.Style);
                 AttachElipse(textBox, 6);
                 return;
             }
@@ -141,6 +154,7 @@ namespace QuizGenAI.Helpers
                 comboBox.BackColor = InputBackground;
                 comboBox.ForeColor = PrimaryText;
                 comboBox.FlatStyle = FlatStyle.Flat;
+                comboBox.Font = CreatePreferredFont(BodyFontFamilyName, comboBox.Font.FontFamily.Name, comboBox.Font.Size, comboBox.Font.Style);
                 AttachElipse(comboBox, 6);
                 return;
             }
@@ -150,6 +164,7 @@ namespace QuizGenAI.Helpers
             {
                 numeric.BackColor = InputBackground;
                 numeric.ForeColor = PrimaryText;
+                numeric.Font = CreatePreferredFont(BodyFontFamilyName, numeric.Font.FontFamily.Name, numeric.Font.Size, numeric.Font.Style);
                 AttachElipse(numeric, 6);
                 return;
             }
@@ -160,6 +175,7 @@ namespace QuizGenAI.Helpers
                 listBox.BackColor = InputBackground;
                 listBox.ForeColor = PrimaryText;
                 listBox.BorderStyle = BorderStyle.FixedSingle;
+                listBox.Font = CreatePreferredFont(BodyFontFamilyName, listBox.Font.FontFamily.Name, listBox.Font.Size, listBox.Font.Style);
                 AttachElipse(listBox, 6);
                 return;
             }
@@ -219,6 +235,87 @@ namespace QuizGenAI.Helpers
             button.FlatAppearance.BorderColor = SurfaceBorder;
             button.BackColor = useAccent ? Accent : SurfaceBackground;
             button.ForeColor = useAccent ? Color.FromArgb(28, 34, 30) : PrimaryText;
+            button.Font = CreatePreferredFont(BodyFontFamilyName, button.Font.FontFamily.Name, button.Font.Size, button.Font.Style);
+        }
+
+        private static bool IsTitleLabel(Label label)
+        {
+            return label.Font.Bold || label.Font.Size >= 14F;
+        }
+
+        private static Font CreatePreferredFont(string preferredFamily, string fallbackFamily, float size, FontStyle style)
+        {
+            var bundledFamily = string.Equals(preferredFamily, TitleFontFamilyName, StringComparison.OrdinalIgnoreCase)
+                ? _bundledTitleFamily
+                : _bundledBodyFamily;
+
+            if (bundledFamily != null)
+            {
+                try
+                {
+                    return new Font(bundledFamily, size, style, GraphicsUnit.Point, 0);
+                }
+                catch
+                {
+                    // Fall through to system-installed fonts.
+                }
+            }
+
+            try
+            {
+                return new Font(preferredFamily, size, style, GraphicsUnit.Point, 0);
+            }
+            catch
+            {
+                try
+                {
+                    return new Font(fallbackFamily, size, style, GraphicsUnit.Point, 0);
+                }
+                catch
+                {
+                    return new Font("Segoe UI", size, style, GraphicsUnit.Point, 0);
+                }
+            }
+        }
+
+        private static void EnsureBundledFontsLoaded()
+        {
+            if (_fontsInitialized)
+            {
+                return;
+            }
+
+            _fontsInitialized = true;
+            TryAddBundledFont(Path.Combine(Application.StartupPath, "Assets", "Fonts", "HostGrotesk-wght.ttf"));
+            TryAddBundledFont(Path.Combine(Application.StartupPath, "Assets", "Fonts", "NotoSans-wdth-wght.ttf"));
+
+            foreach (var family in BundledFonts.Families)
+            {
+                if (_bundledTitleFamily == null && family.Name.IndexOf("Host Grotesk", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _bundledTitleFamily = family;
+                }
+
+                if (_bundledBodyFamily == null && family.Name.IndexOf("Noto Sans", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _bundledBodyFamily = family;
+                }
+            }
+        }
+
+        private static void TryAddBundledFont(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    BundledFonts.AddFontFile(filePath);
+                }
+            }
+            catch
+            {
+                // Keep fallback fonts if local asset loading fails.
+            }
         }
 
         private static bool IsPrimaryAction(string text)

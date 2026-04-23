@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
@@ -13,13 +14,21 @@ namespace QuizGenAI.Forms.Teacher
     {
         private readonly AiQuizService _aiQuizService;
         private readonly QuizService _quizService;
+        private readonly DocumentTextExtractionService _documentTextExtractionService;
         private ComboBox _cmbSubject;
         private ComboBox _cmbDifficulty;
         private NumericUpDown _nudQuestionCount;
         private NumericUpDown _nudDuration;
         private TextBox _txtTopic;
+        private Label _lblDocumentStatus;
         private Label _lblNote;
         private Button _btnGenerate;
+        private ProgressBar _prgGenerateLoading;
+        private Button _btnAttachDocument;
+        private Button _btnClearDocument;
+        private ProgressBar _prgDocumentLoading;
+        private string _selectedDocumentPath;
+        private string _selectedDocumentText;
 
         public AiQuizGeneratorForm()
         {
@@ -27,6 +36,7 @@ namespace QuizGenAI.Forms.Teacher
             if (DesignTimeHelper.IsInDesignMode(this)) return;
             _aiQuizService = new AiQuizService();
             _quizService = new QuizService();
+            _documentTextExtractionService = new DocumentTextExtractionService();
             BuildLayout();
             AppTheme.ApplyCognitaTheme(this);
         }
@@ -42,6 +52,7 @@ namespace QuizGenAI.Forms.Teacher
         private void BuildLayout()
         {
             SuspendLayout();
+            Controls.Clear();
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -106,12 +117,12 @@ namespace QuizGenAI.Forms.Teacher
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
-                RowCount = 6,
+                RowCount = 7,
                 Margin = new Padding(0)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < 6; i++)
             {
                 layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
             }
@@ -152,7 +163,17 @@ namespace QuizGenAI.Forms.Teacher
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(107, 114, 128),
                 Margin = new Padding(0, 8, 0, 0),
-                Text = "If no AI endpoint is configured, the app uses a demo fallback generator so the review-first workflow remains testable."
+                Text = "Attach PDF, DOCX, or DOC files to generate questions from source material. If no AI endpoint is configured, the app uses a demo fallback generator."
+            };
+
+            _lblDocumentStatus = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new Size(430, 0),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(75, 85, 99),
+                Margin = new Padding(0, 9, 0, 0),
+                Text = "No document attached."
             };
 
             layout.Controls.Add(CreateFieldLabel("Subject"), 0, 0);
@@ -168,29 +189,42 @@ namespace QuizGenAI.Forms.Teacher
             layout.Controls.Add(_nudQuestionCount, 1, 3);
             layout.Controls.Add(CreateFieldLabel("Duration (minutes)"), 0, 4);
             layout.Controls.Add(_nudDuration, 1, 4);
-            layout.Controls.Add(CreateFieldLabel("Notes"), 0, 5);
-            layout.Controls.Add(_lblNote, 1, 5);
+            layout.Controls.Add(CreateFieldLabel("Source Document"), 0, 5);
+            layout.Controls.Add(CreateDocumentPicker(), 1, 5);
+            layout.Controls.Add(CreateFieldLabel("Notes"), 0, 6);
+            layout.Controls.Add(_lblNote, 1, 6);
 
             var buttonPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
+                FlowDirection = FlowDirection.RightToLeft,
                 Margin = new Padding(0, 18, 0, 0),
                 WrapContents = false
             };
 
             _btnGenerate = CreatePrimaryButton("Generate");
             _btnGenerate.Width = 120;
-            _btnGenerate.Margin = new Padding(0, 0, 12, 0);
+            _btnGenerate.Margin = new Padding(0, 0, 8, 0);
             _btnGenerate.Click += async delegate { await GenerateAsync(); };
+
+            _prgGenerateLoading = new ProgressBar
+            {
+                Width = 110,
+                Height = 16,
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 24,
+                Visible = false,
+                Margin = new Padding(0, 9, 8, 0)
+            };
 
             var btnCancel = CreateSecondaryButton("Cancel");
             btnCancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 
-            buttonPanel.Controls.Add(_btnGenerate);
             buttonPanel.Controls.Add(btnCancel);
+            buttonPanel.Controls.Add(_btnGenerate);
+            buttonPanel.Controls.Add(_prgGenerateLoading);
 
             cardLayout.Controls.Add(layout, 0, 0);
             cardLayout.Controls.Add(buttonPanel, 0, 1);
@@ -219,11 +253,15 @@ namespace QuizGenAI.Forms.Teacher
             {
                 _cmbSubject.SelectedIndex = 0;
             }
+            else
+            {
+                NotificationHelper.ShowError(this, "No Subjects Found", "Please create at least one subject before generating an AI quiz.");
+            }
         }
 
         private async Task GenerateAsync()
         {
-            _btnGenerate.Enabled = false;
+            SetGenerateLoading(true);
 
             try
             {
@@ -238,6 +276,8 @@ namespace QuizGenAI.Forms.Teacher
                     SubjectId = subject.Id,
                     SubjectName = subject.Name,
                     Topic = _txtTopic.Text,
+                    SourceDocumentFileName = string.IsNullOrWhiteSpace(_selectedDocumentPath) ? null : Path.GetFileName(_selectedDocumentPath),
+                    SourceDocumentText = _selectedDocumentText,
                     Difficulty = _cmbDifficulty.SelectedItem is QuizDifficulty ? (QuizDifficulty)_cmbDifficulty.SelectedItem : QuizDifficulty.Easy,
                     QuestionCount = Convert.ToInt32(_nudQuestionCount.Value),
                     DurationMinutes = Convert.ToInt32(_nudDuration.Value)
@@ -260,7 +300,7 @@ namespace QuizGenAI.Forms.Teacher
             }
             finally
             {
-                _btnGenerate.Enabled = true;
+                SetGenerateLoading(false);
             }
         }
 
@@ -275,6 +315,122 @@ namespace QuizGenAI.Forms.Teacher
                 Margin = new Padding(0, 6, 12, 6),
                 Text = text
             };
+        }
+
+        private Control CreateDocumentPicker()
+        {
+            var holder = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+
+            _btnAttachDocument = CreateSecondaryButton("Attach File");
+            _btnAttachDocument.Width = 110;
+            _btnAttachDocument.Margin = new Padding(0, 0, 8, 0);
+            _btnAttachDocument.Click += async delegate { await AttachSourceDocumentAsync(); };
+
+            _btnClearDocument = CreateSecondaryButton("Clear");
+            _btnClearDocument.Width = 80;
+            _btnClearDocument.Click += delegate
+            {
+                _selectedDocumentPath = null;
+                _selectedDocumentText = null;
+                _lblDocumentStatus.Text = "No document attached.";
+            };
+
+            _prgDocumentLoading = new ProgressBar
+            {
+                Width = 96,
+                Height = 16,
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 24,
+                Visible = false,
+                Margin = new Padding(0, 8, 10, 0)
+            };
+
+            holder.Controls.Add(_btnAttachDocument);
+            holder.Controls.Add(_btnClearDocument);
+            holder.Controls.Add(_prgDocumentLoading);
+            holder.Controls.Add(_lblDocumentStatus);
+            return holder;
+        }
+
+        private async Task AttachSourceDocumentAsync()
+        {
+            try
+            {
+                using (var dialog = new OpenFileDialog())
+                {
+                dialog.Filter = "Supported Documents (*.pdf;*.docx;*.doc)|*.pdf;*.docx;*.doc";
+                    dialog.Multiselect = false;
+                    dialog.Title = "Select source document";
+
+                    if (dialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
+
+                    SetDocumentLoading(true);
+                    var selectedFile = dialog.FileName;
+                    var extracted = await Task.Run(() => _documentTextExtractionService.ExtractText(selectedFile));
+                    _selectedDocumentPath = dialog.FileName;
+                    _selectedDocumentText = extracted;
+                    _lblDocumentStatus.Text = string.Format("Attached: {0} ({1} chars)", Path.GetFileName(dialog.FileName), extracted.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                _selectedDocumentPath = null;
+                _selectedDocumentText = null;
+                _lblDocumentStatus.Text = "No document attached.";
+                LoggingService.Error(ex, "Failed to attach source document.");
+                MessageBox.Show(
+                    this,
+                    "Unable to attach and read this file. Try a smaller or text-based PDF/DOCX file.\n\n" + ex.Message,
+                    "Attach Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                SetDocumentLoading(false);
+            }
+        }
+
+        private void SetDocumentLoading(bool isLoading)
+        {
+            if (_prgDocumentLoading != null)
+            {
+                _prgDocumentLoading.Visible = isLoading;
+            }
+
+            if (_btnAttachDocument != null)
+            {
+                _btnAttachDocument.Enabled = !isLoading;
+            }
+
+            if (_btnClearDocument != null)
+            {
+                _btnClearDocument.Enabled = !isLoading;
+            }
+        }
+
+        private void SetGenerateLoading(bool isLoading)
+        {
+            if (_btnGenerate != null)
+            {
+                _btnGenerate.Enabled = !isLoading;
+            }
+
+            if (_prgGenerateLoading != null)
+            {
+                _prgGenerateLoading.Visible = isLoading;
+            }
         }
 
         private static NumericUpDown CreateNumericInput(decimal minimum, decimal maximum, decimal value)

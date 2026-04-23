@@ -61,7 +61,7 @@ namespace QuizGenAI.Forms.Teacher
             StartPosition = FormStartPosition.CenterParent;
             Text = "Teacher Quizzes";
 
-            // Compact toolbar: search | filter | New Manual | New AI | Close
+            // Compact toolbar: search | filter | Generate Quiz
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
@@ -93,21 +93,14 @@ namespace QuizGenAI.Forms.Teacher
             _cmbStatus.SelectedIndex = 0;
             _cmbStatus.SelectedIndexChanged += delegate { LoadQuizCards(); };
 
-            var btnNewQuiz = CreateActionButton("New Manual Quiz");
-            btnNewQuiz.Width = 148;
-            btnNewQuiz.Height = 34;
-            btnNewQuiz.Location = new Point(428, 10);
-            btnNewQuiz.Click += delegate { OpenEditor(null); };
-
-            var btnNewAiQuiz = CreateActionButton("New AI Quiz");
-            btnNewAiQuiz.Width = 136;
+            var btnNewAiQuiz = CreateActionButton("Generate Quiz");
+            btnNewAiQuiz.Width = 148;
             btnNewAiQuiz.Height = 34;
-            btnNewAiQuiz.Location = new Point(584, 10);
+            btnNewAiQuiz.Location = new Point(428, 10);
             btnNewAiQuiz.Click += async delegate { await OpenAiGeneratorAsync(); };
 
             toolbar.Controls.Add(_txtSearch);
             toolbar.Controls.Add(_cmbStatus);
-            toolbar.Controls.Add(btnNewQuiz);
             toolbar.Controls.Add(btnNewAiQuiz);
 
             _cardsHost = new FlowLayoutPanel

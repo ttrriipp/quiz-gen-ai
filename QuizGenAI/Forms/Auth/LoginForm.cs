@@ -163,7 +163,7 @@ namespace QuizGenAI.Forms.Auth
                     {
                         CurrentUserId = userId,
                         DisplayName = displayName,
-                        Text = string.Format("Teacher Dashboard - {0}", displayName)
+                        Text = string.Format("Teacher Panel - {0}", displayName)
                     };
 
                 case UserRole.Student:
