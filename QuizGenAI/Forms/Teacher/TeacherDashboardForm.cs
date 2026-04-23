@@ -279,7 +279,7 @@ namespace QuizGenAI.Forms.Teacher
                 case "quizzes":
                     _topBar.Visible = true;
                     _lblPageTitle.Text = "Quizzes";
-                    _lblPageDescription.Text = "Manage draft, published, and archived quizzes without leaving the teacher shell.";
+                    _lblPageDescription.Text = "Manage draft, posted, and archived quizzes without leaving the teacher shell.";
                     RenderHostedForm(CreateHostedQuizManager());
                     break;
 
@@ -412,8 +412,8 @@ namespace QuizGenAI.Forms.Teacher
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
-            row.Controls.Add(CreateDashboardStatCard("Total Quizzes", dashboard.TotalQuizzes.ToString(), "+" + dashboard.PublishedQuizzes + " published", false), 0, 0);
-            row.Controls.Add(CreateDashboardStatCard("Published", dashboard.PublishedQuizzes.ToString(), dashboard.DraftQuizzes + " drafts waiting", false), 1, 0);
+            row.Controls.Add(CreateDashboardStatCard("Total Quizzes", dashboard.TotalQuizzes.ToString(), "+" + dashboard.PublishedQuizzes + " posted", false), 0, 0);
+            row.Controls.Add(CreateDashboardStatCard("Posted", dashboard.PublishedQuizzes.ToString(), dashboard.DraftQuizzes + " drafts waiting", false), 1, 0);
             row.Controls.Add(CreateDashboardStatCard("Active Students", dashboard.TotalStudents.ToString(), "+" + dashboard.RecentSubmissions.Count + " recent results", false), 2, 0);
             row.Controls.Add(CreateDashboardStatCard("Avg. Score", dashboard.AverageScore.ToString("0.#") + "%", dashboard.SubmittedAttempts + " submissions", true), 3, 0);
             return row;
@@ -494,14 +494,67 @@ namespace QuizGenAI.Forms.Teacher
         private Panel CreatePassFailCard(TeacherDashboardDto dashboard)
         {
             var panel = CreateDashboardCardPanel();
-            panel.Height = 228;
+            panel.Height = 290;
             panel.Padding = new Padding(14, 14, 14, 14);
+
+            var items = dashboard.PerQuizPassFail != null
+                ? dashboard.PerQuizPassFail
+                : new List<QuizPassFailDto>();
+
+            var header = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                ColumnCount = 1,
+                RowCount = 3,
+                Height = 90,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty
+            };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            header.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            header.RowStyles.Add(new RowStyle(SizeType.Absolute, 22F));
+            header.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+
+            var lblPassFail = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = AppTheme.GetTitleFont(12F),
+                ForeColor = DashboardText,
+                Text = "Pass vs Fail",
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var lblExam = new Label
+            {
+                Dock = DockStyle.Fill,
+                AutoEllipsis = true,
+                Font = AppTheme.GetBodyFont(10.5F, FontStyle.Bold),
+                ForeColor = DashboardText,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = items.Count > 0 ? items[0].ExamName : "No quizzes"
+            };
+
+            var cboQuiz = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.FromArgb(12, 52, 39),
+                ForeColor = DashboardText,
+                FlatStyle = FlatStyle.Flat,
+                Font = AppTheme.GetBodyFont(9.5F),
+                IntegralHeight = false,
+                Enabled = items.Count > 0
+            };
+
+            header.Controls.Add(lblPassFail, 0, 0);
+            header.Controls.Add(lblExam, 0, 1);
+            header.Controls.Add(cboQuiz, 0, 2);
 
             var chartHost = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DashboardCard,
-                Padding = new Padding(8, 4, 8, 2)
+                Padding = new Padding(8, 2, 8, 2)
             };
 
             var chart = new Chart
@@ -532,8 +585,8 @@ namespace QuizGenAI.Forms.Teacher
             };
             series["DoughnutRadius"] = "72";
             series["PieLabelStyle"] = "Inside";
-            series.Points.AddXY("Pass", Math.Max(0, dashboard.PassCount));
-            series.Points.AddXY("Fail", Math.Max(0, dashboard.FailCount));
+            series.Points.AddXY("Pass", 0);
+            series.Points.AddXY("Fail", 0);
             series.Points[0].Label = "Pass";
             series.Points[1].Label = "Fail";
             series.Points[0].Color = Color.FromArgb(24, 105, 72);
@@ -549,13 +602,53 @@ namespace QuizGenAI.Forms.Teacher
                 WrapContents = false,
                 BackColor = Color.Transparent
             };
-            legend.Controls.Add(CreateLegendChip(Color.FromArgb(24, 105, 72), string.Format("Pass ({0})", dashboard.PassCount)));
-            legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", dashboard.FailCount)));
+
+            if (items.Count > 0)
+            {
+                cboQuiz.DataSource = items;
+                cboQuiz.DisplayMember = "QuizTitle";
+            }
+
+            var applySelection = new Action(() =>
+            {
+                var row = cboQuiz.SelectedItem as QuizPassFailDto;
+                if (row == null)
+                {
+                    lblExam.Text = "No quizzes";
+                    series.Points[0].YValues[0] = 0;
+                    series.Points[1].YValues[0] = 0;
+                    series.Points[0].IsValueShownAsLabel = true;
+                    series.Points[1].IsValueShownAsLabel = true;
+                }
+                else
+                {
+                    lblExam.Text = string.IsNullOrWhiteSpace(row.ExamName) ? "—" : row.ExamName;
+                    var pass = Math.Max(0, row.PassCount);
+                    var fail = Math.Max(0, row.FailCount);
+                    series.Points[0].YValues[0] = pass;
+                    series.Points[1].YValues[0] = fail;
+                    series.Points[0].IsValueShownAsLabel = pass + fail > 0;
+                    series.Points[1].IsValueShownAsLabel = pass + fail > 0;
+                }
+
+                var passCount = row != null ? row.PassCount : 0;
+                var failCount = row != null ? row.FailCount : 0;
+                legend.Controls.Clear();
+                legend.Controls.Add(CreateLegendChip(Color.FromArgb(24, 105, 72), string.Format("Pass ({0})", passCount)));
+                legend.Controls.Add(CreateLegendChip(DashboardDanger, string.Format("Fail ({0})", failCount)));
+                chart.Invalidate();
+            });
+
+            cboQuiz.SelectedIndexChanged += delegate
+            {
+                applySelection();
+            };
+            applySelection();
 
             panel.Controls.Add(legend);
             chartHost.Controls.Add(chart);
             panel.Controls.Add(chartHost);
-            panel.Controls.Add(CreateDashboardCardHeader("Pass vs Fail"));
+            panel.Controls.Add(header);
             return panel;
         }
 
@@ -577,12 +670,24 @@ namespace QuizGenAI.Forms.Teacher
             var ys = subjects.Select(x => x.AverageScore).ToArray();
             if (subjects.Count > 0)
             {
+                var subjectPalette = new[]
+                {
+                    Color.FromArgb(24, 105, 72),
+                    Color.FromArgb(28, 124, 104),
+                    Color.FromArgb(62, 140, 98),
+                    Color.FromArgb(95, 158, 86),
+                    Color.FromArgb(121, 174, 104),
+                    Color.FromArgb(149, 186, 90)
+                };
                 var bars = chart.Plot.Add.Bars(xs, ys);
+                var colorIndex = 0;
                 foreach (var bar in bars.Bars)
                 {
-                    bar.FillColor = ScottColor.FromColor(Color.FromArgb(24, 92, 67));
+                    var color = subjectPalette[colorIndex % subjectPalette.Length];
+                    bar.FillColor = ScottColor.FromColor(color);
                     bar.LineColor = ScottColor.FromColor(DashboardAccent);
                     bar.LineWidth = 1;
+                    colorIndex++;
                 }
 
                 chart.Plot.Axes.Bottom.SetTicks(xs, subjects.Select(x => x.SubjectName).ToArray());

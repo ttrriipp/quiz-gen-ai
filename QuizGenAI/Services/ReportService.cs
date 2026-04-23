@@ -196,7 +196,7 @@ namespace QuizGenAI.Services
                     .ToList();
 
                 dashboard.StatusBreakdown.Add(new QuizStatusBreakdownDto { Label = "Draft", Count = dashboard.DraftQuizzes });
-                dashboard.StatusBreakdown.Add(new QuizStatusBreakdownDto { Label = "Published", Count = dashboard.PublishedQuizzes });
+                dashboard.StatusBreakdown.Add(new QuizStatusBreakdownDto { Label = "Posted", Count = dashboard.PublishedQuizzes });
                 dashboard.StatusBreakdown.Add(new QuizStatusBreakdownDto { Label = "Archived", Count = dashboard.ArchivedQuizzes });
 
                 dashboard.SubjectPerformance = submittedAttempts
@@ -210,6 +210,22 @@ namespace QuizGenAI.Services
                     })
                     .OrderByDescending(x => x.AverageScore)
                     .Take(5)
+                    .ToList();
+
+                dashboard.PerQuizPassFail = quizzes
+                    .OrderBy(x => x.Title)
+                    .Select(q =>
+                    {
+                        var forQuiz = submittedAttempts.Where(x => x.QuizId == q.Id).ToList();
+                        return new QuizPassFailDto
+                        {
+                            QuizId = q.Id,
+                            QuizTitle = q.Title,
+                            ExamName = q.Subject != null ? q.Subject.Name : "Unknown subject",
+                            PassCount = forQuiz.Count(x => (x.ScorePercentage ?? 0) >= 75),
+                            FailCount = forQuiz.Count(x => (x.ScorePercentage ?? 0) < 75)
+                        };
+                    })
                     .ToList();
 
                 return dashboard;

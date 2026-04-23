@@ -88,7 +88,7 @@ namespace QuizGenAI.Forms.Teacher
             };
             _cmbStatus.Items.Add(new StatusFilterOption("All statuses", null));
             _cmbStatus.Items.Add(new StatusFilterOption("Draft", QuizStatus.Draft));
-            _cmbStatus.Items.Add(new StatusFilterOption("Published", QuizStatus.Published));
+            _cmbStatus.Items.Add(new StatusFilterOption("Posted", QuizStatus.Published));
             _cmbStatus.Items.Add(new StatusFilterOption("Archived", QuizStatus.Archived));
             _cmbStatus.SelectedIndex = 0;
             _cmbStatus.SelectedIndexChanged += delegate { LoadQuizCards(); };
@@ -160,7 +160,7 @@ namespace QuizGenAI.Forms.Teacher
             var subjectBadge = CreateBadgePill(quiz.SubjectName, Color.FromArgb(22, 74, 56), new Point(px, 12));
 
             // Status badge – pill on the right, dark themed colors
-            var statusBadge = CreateBadgePill(quiz.Status.ToString(), GetStatusBgColor(quiz.Status), Point.Empty);
+            var statusBadge = CreateBadgePill(GetStatusDisplayText(quiz.Status), GetStatusBgColor(quiz.Status), Point.Empty);
             statusBadge.Location = new Point(cardW - statusBadge.Width - px, 12);
 
             var lblTitle = new Label
@@ -422,7 +422,7 @@ namespace QuizGenAI.Forms.Teacher
                     "Quiz Status Updated",
                     quiz.Status == QuizStatus.Published
                         ? string.Format("\"{0}\" moved back to draft.", quiz.Title)
-                        : string.Format("\"{0}\" is now published.", quiz.Title));
+                        : string.Format("\"{0}\" is now posted.", quiz.Title));
                 LoadQuizCards();
             }
             catch (Exception ex)
@@ -482,7 +482,12 @@ namespace QuizGenAI.Forms.Teacher
 
         private static string GetPrimaryStatusActionLabel(QuizListItemDto quiz)
         {
-            return quiz.Status == QuizStatus.Published ? "Move To Draft" : "Publish";
+            return quiz.Status == QuizStatus.Published ? "Move To Draft" : "Post";
+        }
+
+        private static string GetStatusDisplayText(QuizStatus status)
+        {
+            return status == QuizStatus.Published ? "Posted" : status.ToString();
         }
 
         private static Color GetStatusBgColor(QuizStatus status)

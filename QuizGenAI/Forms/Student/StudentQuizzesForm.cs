@@ -1117,13 +1117,13 @@ namespace QuizGenAI.Forms.Student
 
             if (_studentQuizzes.Count == 0)
             {
-                _lblQuizSearchSummary.Text = "Published quizzes will appear here as soon as they are available.";
+                _lblQuizSearchSummary.Text = "Posted quizzes will appear here as soon as they are available.";
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_quizSearchTerm))
             {
-                _lblQuizSearchSummary.Text = string.Format("{0} published quiz{1} available.", filteredCount, filteredCount == 1 ? string.Empty : "zes");
+                _lblQuizSearchSummary.Text = string.Format("{0} posted quiz{1} available.", filteredCount, filteredCount == 1 ? string.Empty : "zes");
                 return;
             }
 
@@ -1137,7 +1137,7 @@ namespace QuizGenAI.Forms.Student
 
         private Control CreateQuizEmptyStateCard()
         {
-            return CreateQuizEmptyStateCard("No published quizzes are available yet. Once a teacher publishes a quiz, it will appear here automatically.");
+            return CreateQuizEmptyStateCard("No posted quizzes are available yet. Once a teacher posts a quiz, it will appear here automatically.");
         }
 
         private Control CreateEmptyStateCard(string message)

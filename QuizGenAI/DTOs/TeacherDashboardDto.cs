@@ -9,6 +9,7 @@ namespace QuizGenAI.DTOs
             RecentSubmissions = new List<RecentSubmissionDto>();
             StatusBreakdown = new List<QuizStatusBreakdownDto>();
             SubjectPerformance = new List<SubjectPerformanceDto>();
+            PerQuizPassFail = new List<QuizPassFailDto>();
         }
 
         public int TotalStudents { get; set; }
@@ -20,6 +21,7 @@ namespace QuizGenAI.DTOs
         public int SubmittedAttempts { get; set; }
         public int PassCount { get; set; }
         public int FailCount { get; set; }
+        public List<QuizPassFailDto> PerQuizPassFail { get; set; }
         public List<RecentSubmissionDto> RecentSubmissions { get; set; }
         public List<QuizStatusBreakdownDto> StatusBreakdown { get; set; }
         public List<SubjectPerformanceDto> SubjectPerformance { get; set; }
@@ -44,5 +46,14 @@ namespace QuizGenAI.DTOs
         public string SubjectName { get; set; }
         public double AverageScore { get; set; }
         public int AttemptCount { get; set; }
+    }
+
+    public class QuizPassFailDto
+    {
+        public int QuizId { get; set; }
+        public string QuizTitle { get; set; }
+        public string ExamName { get; set; }
+        public int PassCount { get; set; }
+        public int FailCount { get; set; }
     }
 }

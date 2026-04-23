@@ -48,7 +48,7 @@ namespace QuizGenAI.Forms.Teacher
 
             // cmbStatusD
             this.cmbStatusD.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbStatusD.Items.AddRange(new object[] { "All statuses", "Draft", "Published", "Archived" });
+            this.cmbStatusD.Items.AddRange(new object[] { "All statuses", "Draft", "Posted", "Archived" });
             this.cmbStatusD.Location = new System.Drawing.Point(268, 14);
             this.cmbStatusD.SelectedIndex = 0;
             this.cmbStatusD.Width = 148;
