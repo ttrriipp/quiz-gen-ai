@@ -45,9 +45,8 @@ namespace QuizGenAI.Forms.Teacher
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(700, 470);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterParent;
             Text = "New AI Quiz";
 

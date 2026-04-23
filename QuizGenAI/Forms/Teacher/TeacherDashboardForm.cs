@@ -74,9 +74,8 @@ namespace QuizGenAI.Forms.Teacher
 
             BackColor = MainWorkspaceGreen;
             Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            ClientSize = new Size(1280, 800);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Teacher Dashboard";
 

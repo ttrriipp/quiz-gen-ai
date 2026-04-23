@@ -25,6 +25,8 @@ namespace QuizGenAI.Forms.Auth
                 return;
             }
 
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
             _authService = new AuthService();
             AcceptButton = btnLogin;
             txtEmail.Text = "teacher@quizgenai.local";

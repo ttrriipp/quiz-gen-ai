@@ -47,9 +47,8 @@ namespace QuizGenAI.Forms.Student
 
             BackColor = Color.FromArgb(243, 244, 246);
             Font = new Font("Segoe UI", 10F);
-            ClientSize = new Size(980, 700);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Result Summary";
 

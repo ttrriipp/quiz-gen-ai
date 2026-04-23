@@ -95,9 +95,8 @@ namespace QuizGenAI.Forms.Student
 
             BackColor = Color.FromArgb(244, 246, 248);
             Font = new Font("Segoe UI", 10F);
-            ClientSize = new Size(1220, 780);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Student Workspace";
 
