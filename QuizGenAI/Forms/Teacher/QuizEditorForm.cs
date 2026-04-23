@@ -146,7 +146,11 @@ namespace QuizGenAI.Forms.Teacher
             metaLayout.Controls.Add(_cmbDifficulty, 3, 1);
             metaLayout.Controls.Add(CreateFieldLabel("Duration"), 0, 2);
             metaLayout.Controls.Add(_nudDuration, 1, 2);
-            metaLayout.Controls.Add(CreateHintLabel("minutes"), 1, 3);
+            var lblDurationUnit = CreateHintLabel("minutes");
+            lblDurationUnit.Dock = DockStyle.Left;
+            lblDurationUnit.TextAlign = ContentAlignment.MiddleLeft;
+            lblDurationUnit.Margin = new Padding(8, 0, 0, 0);
+            metaLayout.Controls.Add(lblDurationUnit, 2, 2);
 
             metaPanel.Controls.Add(metaLayout);
 
@@ -158,7 +162,7 @@ namespace QuizGenAI.Forms.Teacher
                 RowCount = 1,
                 Margin = new Padding(0, 18, 0, 0)
             };
-            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360F));
+            editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 800F));
             editorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             editorArea.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -180,8 +184,11 @@ namespace QuizGenAI.Forms.Teacher
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 11F),
                 IntegralHeight = false,
-                HorizontalScrollbar = true
+                HorizontalScrollbar = false,
+                DrawMode = DrawMode.OwnerDrawVariable
             };
+            _lstQuestions.MeasureItem += LstQuestions_MeasureItem;
+            _lstQuestions.DrawItem += LstQuestions_DrawItem;
             _lstQuestions.SelectedIndexChanged += LstQuestions_SelectedIndexChanged;
 
             var listButtons = new Panel
@@ -402,21 +409,116 @@ namespace QuizGenAI.Forms.Teacher
         private void RefreshQuestionList()
         {
             _lstQuestions.Items.Clear();
-            var horizontalExtent = 0;
 
             for (var i = 0; i < _questions.Count; i++)
             {
                 var question = _questions[i];
-                var label = string.Format("Q{0}. {1}", i + 1, question.Text);
+                var label = BuildQuestionPreviewText(question, i + 1);
                 _lstQuestions.Items.Add(label);
-                var measured = TextRenderer.MeasureText(label, _lstQuestions.Font).Width + 24;
-                if (measured > horizontalExtent)
+            }
+            _lstQuestions.Invalidate();
+        }
+
+        private static string BuildQuestionPreviewText(QuizQuestionEditorDto question, int number)
+        {
+            var lines = new List<string>
+            {
+                string.Format("Q{0}. {1}", number, question.Text ?? string.Empty)
+            };
+
+            var choices = question.Choices ?? new List<QuizChoiceEditorDto>();
+            var correctChoiceIndex = -1;
+            for (var i = 0; i < choices.Count; i++)
+            {
+                if (correctChoiceIndex < 0 && choices[i] != null && choices[i].IsCorrect)
                 {
-                    horizontalExtent = measured;
+                    correctChoiceIndex = i;
                 }
             }
 
-            _lstQuestions.HorizontalExtent = horizontalExtent;
+            if (correctChoiceIndex >= 0 && correctChoiceIndex < choices.Count)
+            {
+                var answerPrefix = correctChoiceIndex < 26
+                    ? ((char)('A' + correctChoiceIndex)).ToString()
+                    : (correctChoiceIndex + 1).ToString();
+                var answerText = choices[correctChoiceIndex] != null ? choices[correctChoiceIndex].Text : string.Empty;
+                lines.Add(string.Format("    Answer: {0}) {1}", answerPrefix, answerText));
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private void LstQuestions_MeasureItem(object sender, MeasureItemEventArgs e)
+        {
+            if (e.Index < 0 || e.Index >= _lstQuestions.Items.Count)
+            {
+                e.ItemHeight = 44;
+                return;
+            }
+
+            var text = Convert.ToString(_lstQuestions.Items[e.Index]) ?? string.Empty;
+            var lines = text.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            var questionLine = lines.Length > 0 ? lines[0] : string.Empty;
+            var answerLine = lines.Length > 1 ? lines[1] : string.Empty;
+            var width = Math.Max(160, _lstQuestions.ClientSize.Width - 16);
+
+            using (var questionFont = new Font(_lstQuestions.Font, FontStyle.Bold))
+            using (var answerFont = new Font(_lstQuestions.Font.FontFamily, Math.Max(9F, _lstQuestions.Font.Size - 1.5F), FontStyle.Regular))
+            {
+                var questionSize = TextRenderer.MeasureText(
+                    questionLine,
+                    questionFont,
+                    new Size(width, int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+
+                var answerSize = TextRenderer.MeasureText(
+                    answerLine,
+                    answerFont,
+                    new Size(width - 18, int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+
+                e.ItemHeight = Math.Max(50, questionSize.Height + answerSize.Height + 14);
+            }
+        }
+
+        private void LstQuestions_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            if (e.Index < 0 || e.Index >= _lstQuestions.Items.Count)
+            {
+                return;
+            }
+
+            var selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+            var background = selected ? Color.FromArgb(17, 93, 86) : _lstQuestions.BackColor;
+            var foreground = selected ? Color.White : _lstQuestions.ForeColor;
+
+            var text = Convert.ToString(_lstQuestions.Items[e.Index]) ?? string.Empty;
+            var lines = text.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            var questionLine = lines.Length > 0 ? lines[0] : string.Empty;
+            var answerLine = lines.Length > 1 ? lines[1] : string.Empty;
+
+            using (var bg = new SolidBrush(background))
+            using (var fg = new SolidBrush(foreground))
+            using (var questionFont = new Font(_lstQuestions.Font, FontStyle.Bold))
+            using (var answerFont = new Font(_lstQuestions.Font.FontFamily, Math.Max(9F, _lstQuestions.Font.Size - 1.5F), FontStyle.Regular))
+            {
+                e.Graphics.FillRectangle(bg, e.Bounds);
+                var questionBounds = new Rectangle(e.Bounds.X + 6, e.Bounds.Y + 4, e.Bounds.Width - 12, e.Bounds.Height - 8);
+                e.Graphics.DrawString(questionLine, questionFont, fg, questionBounds);
+
+                if (!string.IsNullOrWhiteSpace(answerLine))
+                {
+                    var questionHeight = TextRenderer.MeasureText(
+                        questionLine,
+                        questionFont,
+                        new Size(questionBounds.Width, int.MaxValue),
+                        TextFormatFlags.WordBreak | TextFormatFlags.NoPadding).Height;
+                    var answerBounds = new Rectangle(questionBounds.X + 16, questionBounds.Y + questionHeight + 2, questionBounds.Width - 16, questionBounds.Height - questionHeight - 2);
+                    e.Graphics.DrawString(answerLine, answerFont, fg, answerBounds);
+                }
+            }
+
+            e.DrawFocusRectangle();
         }
 
         private void LstQuestions_SelectedIndexChanged(object sender, EventArgs e)
