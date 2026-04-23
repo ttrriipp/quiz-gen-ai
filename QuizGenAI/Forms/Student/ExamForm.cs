@@ -42,6 +42,11 @@ namespace QuizGenAI.Forms.Student
         private bool _isSubmitting;
         private bool _timeWarningShown;
 
+        public ExamForm()
+        {
+            InitializeComponent();
+        }
+
         public ExamForm(int studentId, int attemptId)
         {
             _studentId = studentId;

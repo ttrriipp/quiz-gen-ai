@@ -22,6 +22,11 @@ namespace QuizGenAI.Forms.Student
         private readonly StudentAttemptSummaryDto _summary;
         private readonly ResultPdfExportService _pdfExportService = new ResultPdfExportService();
 
+        public StudentResultsForm()
+        {
+            InitializeComponent();
+        }
+
         public StudentResultsForm(StudentAttemptSummaryDto summary)
         {
             if (summary == null)

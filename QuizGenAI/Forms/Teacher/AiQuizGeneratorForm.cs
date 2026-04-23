@@ -9,7 +9,7 @@ using QuizGenAI.Services;
 
 namespace QuizGenAI.Forms.Teacher
 {
-    public class AiQuizGeneratorForm : Form
+    public partial class AiQuizGeneratorForm : Form
     {
         private readonly AiQuizService _aiQuizService;
         private readonly QuizService _quizService;
@@ -23,6 +23,8 @@ namespace QuizGenAI.Forms.Teacher
 
         public AiQuizGeneratorForm()
         {
+            InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this)) return;
             _aiQuizService = new AiQuizService();
             _quizService = new QuizService();
             BuildLayout();

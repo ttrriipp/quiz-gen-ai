@@ -214,6 +214,9 @@
     <Compile Include="Forms\Teacher\AiQuizGeneratorForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\Teacher\AiQuizGeneratorForm.Designer.cs">
+      <DependentUpon>AiQuizGeneratorForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Teacher\QuizEditorForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -260,6 +263,12 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Forms\Auth\LoginForm.resx">
       <DependentUpon>LoginForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Student\StudentResultsForm.resx">
+      <DependentUpon>StudentResultsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Teacher\QuizEditorForm.resx">
+      <DependentUpon>QuizEditorForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Teacher\TeacherQuizzesForm.resx">
       <DependentUpon>TeacherQuizzesForm.cs</DependentUpon>
