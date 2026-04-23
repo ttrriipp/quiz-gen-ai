@@ -30,6 +30,11 @@ namespace QuizGenAI.Forms.Teacher
         public TeacherQuizzesForm()
         {
             InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this))
+            {
+                return;
+            }
+
             _quizService = new QuizService();
             BuildLayout();
             AppTheme.ApplyCognitaTheme(this);

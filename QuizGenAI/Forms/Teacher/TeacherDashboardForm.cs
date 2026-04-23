@@ -44,6 +44,11 @@ namespace QuizGenAI.Forms.Teacher
         public TeacherDashboardForm()
         {
             InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this))
+            {
+                return;
+            }
+
             BuildShell();
             ShowSection("dashboard");
             AppTheme.ApplyCognitaTheme(this);

@@ -32,6 +32,11 @@ namespace QuizGenAI.Forms.Teacher
         public QuizEditorForm()
         {
             InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this))
+            {
+                return;
+            }
+
             _quizService = new QuizService();
             _questions = new List<QuizQuestionEditorDto>();
             BuildLayout();

@@ -20,6 +20,11 @@ namespace QuizGenAI.Forms.Auth
         public LoginForm()
         {
             InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this))
+            {
+                return;
+            }
+
             _authService = new AuthService();
             AcceptButton = btnLogin;
             txtEmail.Text = "teacher@quizgenai.local";

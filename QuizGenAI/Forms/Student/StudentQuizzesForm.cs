@@ -52,6 +52,11 @@ namespace QuizGenAI.Forms.Student
         public StudentQuizzesForm()
         {
             InitializeComponent();
+            if (DesignTimeHelper.IsInDesignMode(this))
+            {
+                return;
+            }
+
             BuildShell();
             ShowSection("quizzes");
             AppTheme.ApplyCognitaTheme(this);
