@@ -23,6 +23,7 @@ namespace QuizGenAI.Forms.Auth
         private System.Windows.Forms.TextBox txtPassword;
         private System.Windows.Forms.Button btnLogin;
         private System.Windows.Forms.Label lblHint;
+        private System.Windows.Forms.Button btnCloseApp;
 
         protected override void Dispose(bool disposing)
         {
@@ -56,6 +57,7 @@ namespace QuizGenAI.Forms.Auth
             this.txtPassword = new System.Windows.Forms.TextBox();
             this.btnLogin = new System.Windows.Forms.Button();
             this.lblHint = new System.Windows.Forms.Label();
+            this.btnCloseApp = new System.Windows.Forms.Button();
             this.panelBackground.SuspendLayout();
             this.pnlCard.SuspendLayout();
             this.layoutCard.SuspendLayout();
@@ -67,6 +69,7 @@ namespace QuizGenAI.Forms.Auth
             // 
             // panelBackground
             // 
+            this.panelBackground.Controls.Add(this.btnCloseApp);
             this.panelBackground.Controls.Add(this.pnlCard);
             this.panelBackground.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelBackground.Location = new System.Drawing.Point(0, 0);
@@ -75,6 +78,26 @@ namespace QuizGenAI.Forms.Auth
             this.panelBackground.TabIndex = 0;
             this.panelBackground.Paint += new System.Windows.Forms.PaintEventHandler(this.panelBackground_Paint);
             this.panelBackground.Resize += new System.EventHandler(this.panelBackground_Resize);
+            // 
+            // btnCloseApp
+            // 
+            this.btnCloseApp.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCloseApp.BackColor = System.Drawing.Color.Transparent;
+            this.btnCloseApp.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnCloseApp.FlatAppearance.BorderSize = 0;
+            this.btnCloseApp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.btnCloseApp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(220)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
+            this.btnCloseApp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCloseApp.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnCloseApp.ForeColor = System.Drawing.Color.White;
+            this.btnCloseApp.Location = new System.Drawing.Point(909, 12);
+            this.btnCloseApp.Margin = new System.Windows.Forms.Padding(0);
+            this.btnCloseApp.Name = "btnCloseApp";
+            this.btnCloseApp.Size = new System.Drawing.Size(39, 32);
+            this.btnCloseApp.TabIndex = 1;
+            this.btnCloseApp.Text = "X";
+            this.btnCloseApp.UseVisualStyleBackColor = false;
+            this.btnCloseApp.Click += new System.EventHandler(this.btnCloseApp_Click);
             // 
             // pnlCard
             // 

@@ -171,6 +171,11 @@ namespace QuizGenAI.Forms.Auth
             }
         }
 
+        private void btnCloseApp_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
         private Form CreateLandingForm(int userId, UserRole role, string displayName)
         {
             switch (role)

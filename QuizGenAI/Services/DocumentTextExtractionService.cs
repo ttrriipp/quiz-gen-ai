@@ -33,11 +33,22 @@ namespace QuizGenAI.Services
             var extension = (Path.GetExtension(filePath) ?? string.Empty).ToLowerInvariant();
             var header = ReadFileHeader(filePath, 8);
 
+            // Prefer signature-based detection so mislabeled files still work.
+            if (LooksLikePdf(header))
+            {
+                return PrepareForPrompt(ExtractPdfText(filePath));
+            }
+
+            if (LooksLikeDoc(header))
+            {
+                return PrepareForPrompt(ExtractDocText(filePath));
+            }
+
             if (extension.Equals(".docx", StringComparison.OrdinalIgnoreCase))
             {
                 if (!LooksLikeZip(header))
                 {
-                    throw new InvalidOperationException("This file is not a valid DOCX document. Please upload a real .docx file (not .doc).");
+                    throw new InvalidOperationException("This file is not a valid DOCX document.");
                 }
 
                 return PrepareForPrompt(ExtractDocxText(filePath));
@@ -50,11 +61,6 @@ namespace QuizGenAI.Services
 
             if (extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                if (!LooksLikePdf(header))
-                {
-                    throw new InvalidOperationException("This file does not appear to be a valid PDF.");
-                }
-
                 return PrepareForPrompt(ExtractPdfText(filePath));
             }
 
@@ -172,6 +178,13 @@ namespace QuizGenAI.Services
 
         private static string ExtractDocText(string filePath)
         {
+            // Legacy .doc extraction prefers Word Interop for best fidelity.
+            // If Word isn't available, we fallback to heuristic text scraping.
+            if (!LooksLikeDoc(ReadFileHeader(filePath, 8)))
+            {
+                throw new InvalidOperationException("This file is not a valid DOC document.");
+            }
+
             object wordApplication = null;
             object documents = null;
             object document = null;
@@ -220,7 +233,13 @@ namespace QuizGenAI.Services
             }
             catch (COMException)
             {
-                throw new InvalidOperationException("Unable to read .doc file. Please install Microsoft Word or convert the file to .docx.");
+                var fallbackText = TryExtractDocTextWithoutWord(filePath);
+                if (string.IsNullOrWhiteSpace(fallbackText))
+                {
+                    throw new InvalidOperationException("Unable to read .doc file. Please install Microsoft Word or convert the file to .docx.");
+                }
+
+                return fallbackText;
             }
             finally
             {
@@ -458,6 +477,20 @@ namespace QuizGenAI.Services
             return buffer;
         }
 
+        private static bool LooksLikeDoc(byte[] header)
+        {
+            return header != null &&
+                   header.Length >= 8 &&
+                   header[0] == 0xD0 &&
+                   header[1] == 0xCF &&
+                   header[2] == 0x11 &&
+                   header[3] == 0xE0 &&
+                   header[4] == 0xA1 &&
+                   header[5] == 0xB1 &&
+                   header[6] == 0x1A &&
+                   header[7] == 0xE1;
+        }
+
         private static bool LooksLikePdf(byte[] header)
         {
             return header != null &&
@@ -476,6 +509,21 @@ namespace QuizGenAI.Services
                    header[1] == 0x4B &&
                    (header[2] == 0x03 || header[2] == 0x05 || header[2] == 0x07) &&
                    (header[3] == 0x04 || header[3] == 0x06 || header[3] == 0x08);
+        }
+
+        private static string TryExtractDocTextWithoutWord(string filePath)
+        {
+            try
+            {
+                var bytes = File.ReadAllBytes(filePath);
+                var content = Encoding.GetEncoding("ISO-8859-1").GetString(bytes);
+                var printable = ExtractPrintableSegments(content);
+                return CollapseWhitespace(printable);
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private static void SetProperty(object target, string propertyName, object value)

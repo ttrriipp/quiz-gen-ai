@@ -410,7 +410,7 @@ namespace QuizGenAI.Forms.Teacher
                 LoggingService.Error(ex, "Failed to attach source document.");
                 MessageBox.Show(
                     this,
-                    "Unable to attach and read this file. Try a smaller or text-based PDF/DOCX file.\n\n" + ex.Message,
+                    "Unable to attach and read this file. Try a smaller or text-based PDF/DOCX/DOC file.\n\n" + ex.Message,
                     "Attach Failed",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
