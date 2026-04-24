@@ -215,7 +215,7 @@ namespace QuizGenAI.Forms.Teacher
             // "Review & edit" – full-width primary button
             var btnEdit = new Button
             {
-                Text = "Review && edit",
+                Text = quiz.IsLockedForEditing ? "View Quiz" : "Review && edit",
                 Width = contentW,
                 Height = 32,
                 Location = new Point(px, 164),
@@ -227,7 +227,7 @@ namespace QuizGenAI.Forms.Teacher
             };
             btnEdit.FlatAppearance.BorderColor = Color.FromArgb(44, 105, 82);
             btnEdit.FlatAppearance.BorderSize = 1;
-            btnEdit.Click += delegate { OpenEditor(quiz.Id); };
+            btnEdit.Click += delegate { OpenEditor(quiz.Id, quiz.IsLockedForEditing); };
 
             // Secondary action buttons
             var btnStatus = new Button
@@ -334,12 +334,13 @@ namespace QuizGenAI.Forms.Teacher
             return panel;
         }
 
-        private void OpenEditor(int? quizId)
+        private void OpenEditor(int? quizId, bool readOnly)
         {
             using (var form = new QuizEditorForm())
             {
                 form.CurrentUserId = CurrentUserId;
                 form.QuizId = quizId;
+                form.IsReadOnly = readOnly;
 
                 if (form.ShowDialog(this) == DialogResult.OK)
                 {
@@ -482,7 +483,7 @@ namespace QuizGenAI.Forms.Teacher
 
         private static string GetPrimaryStatusActionLabel(QuizListItemDto quiz)
         {
-            return quiz.Status == QuizStatus.Published ? "Move To Draft" : "Post";
+            return quiz.Status == QuizStatus.Published ? "Draft" : "Post";
         }
 
         private static string GetStatusDisplayText(QuizStatus status)

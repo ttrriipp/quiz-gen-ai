@@ -97,6 +97,7 @@ namespace QuizGenAI.Services
                 var query = context.Quizzes
                     .Include(x => x.Subject)
                     .Include(x => x.Questions)
+                    .Include(x => x.StudentAttempts)
                     .Where(x => !x.IsDeleted)
                     .AsQueryable();
 
@@ -129,6 +130,7 @@ namespace QuizGenAI.Services
                         QuestionCount = x.Questions.Count,
                         UpdatedAt = x.UpdatedAt,
                         CanPublish = x.Questions.Count > 0,
+                        IsLockedForEditing = x.Status == QuizStatus.Published && x.StudentAttempts.Any(a => a.SubmittedAt.HasValue),
                         AvailableFrom = x.AvailableFrom,
                         AvailableUntil = x.AvailableUntil
                     })
@@ -200,6 +202,7 @@ namespace QuizGenAI.Services
                 {
                     quiz = context.Quizzes
                         .Include(x => x.Questions.Select(q => q.Choices))
+                        .Include(x => x.StudentAttempts)
                         .SingleOrDefault(x => x.Id == quizEditor.Id);
 
                     if (quiz == null)
@@ -211,6 +214,8 @@ namespace QuizGenAI.Services
                     {
                         throw new InvalidOperationException("This quiz is no longer available.");
                     }
+
+                    EnsureQuizEditable(quiz);
 
                     foreach (var question in quiz.Questions.ToList())
                     {
@@ -294,6 +299,23 @@ namespace QuizGenAI.Services
                     isNewQuiz,
                     quiz.AiGenerated);
                 return quiz.Id;
+            }
+        }
+
+        public bool IsQuizLockedForEditing(int quizId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                var quiz = context.Quizzes
+                    .Include(x => x.StudentAttempts)
+                    .SingleOrDefault(x => x.Id == quizId);
+
+                if (quiz == null || quiz.IsDeleted)
+                {
+                    return false;
+                }
+
+                return quiz.Status == QuizStatus.Published && quiz.StudentAttempts.Any(x => x.SubmittedAt.HasValue);
             }
         }
 
@@ -514,6 +536,16 @@ namespace QuizGenAI.Services
                 {
                     throw new InvalidOperationException("Each published question must have exactly one correct choice.");
                 }
+            }
+        }
+
+        private static void EnsureQuizEditable(Quiz quiz)
+        {
+            if (quiz.Status == QuizStatus.Published &&
+                quiz.StudentAttempts != null &&
+                quiz.StudentAttempts.Any(x => x.SubmittedAt.HasValue))
+            {
+                throw new InvalidOperationException("This posted quiz already has student submissions and is now view-only.");
             }
         }
 

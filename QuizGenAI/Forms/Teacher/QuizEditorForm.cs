@@ -27,6 +27,14 @@ namespace QuizGenAI.Forms.Teacher
         private ComboBox _cmbCorrectChoice;
         private TextBox _txtExplanation;
         private Label _lblQuestionHint;
+        private Button _btnNewQuestion;
+        private Button _btnRemoveQuestion;
+        private Button _btnApplyQuestion;
+        private Button _btnSaveDraft;
+        private Button _btnCancel;
+        private Label _lblHeaderTitle;
+        private Label _lblHeaderSubtitle;
+        private bool _isReadOnly;
         private List<QuizQuestionEditorDto> _questions;
 
         public QuizEditorForm()
@@ -46,6 +54,7 @@ namespace QuizGenAI.Forms.Teacher
         public int CurrentUserId { get; set; }
         public int? QuizId { get; set; }
         public QuizEditorDto InitialQuizData { get; set; }
+        public bool IsReadOnly { get; set; }
 
         protected override void OnShown(EventArgs e)
         {
@@ -74,7 +83,7 @@ namespace QuizGenAI.Forms.Teacher
                 Padding = new Padding(24, 18, 24, 16)
             };
 
-            var lblTitle = new Label
+            _lblHeaderTitle = new Label
             {
                 Dock = DockStyle.Top,
                 Height = 34,
@@ -83,7 +92,7 @@ namespace QuizGenAI.Forms.Teacher
                 Text = "Manual Quiz Editor"
             };
 
-            var lblSubtitle = new Label
+            _lblHeaderSubtitle = new Label
             {
                 Dock = DockStyle.Top,
                 Height = 22,
@@ -92,8 +101,8 @@ namespace QuizGenAI.Forms.Teacher
                 Text = "Build a draft quiz, add multiple-choice questions, and save for later review."
             };
 
-            header.Controls.Add(lblSubtitle);
-            header.Controls.Add(lblTitle);
+            header.Controls.Add(_lblHeaderSubtitle);
+            header.Controls.Add(_lblHeaderTitle);
 
             var body = new Panel
             {
@@ -197,12 +206,12 @@ namespace QuizGenAI.Forms.Teacher
                 Height = 42
             };
 
-            var btnAddNew = CreatePrimaryButton("New Question");
-            btnAddNew.Width = 128;
-            btnAddNew.Location = new Point(0, 4);
-            btnAddNew.Click += delegate { BeginNewQuestion(); };
+            _btnNewQuestion = CreatePrimaryButton("New Question");
+            _btnNewQuestion.Width = 128;
+            _btnNewQuestion.Location = new Point(0, 4);
+            _btnNewQuestion.Click += delegate { BeginNewQuestion(); };
 
-            var btnRemove = new Button
+            _btnRemoveQuestion = new Button
             {
                 Text = "Remove",
                 Width = 104,
@@ -212,10 +221,10 @@ namespace QuizGenAI.Forms.Teacher
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI", 10.5F)
             };
-            btnRemove.Click += delegate { RemoveSelectedQuestion(); };
+            _btnRemoveQuestion.Click += delegate { RemoveSelectedQuestion(); };
 
-            listButtons.Controls.Add(btnAddNew);
-            listButtons.Controls.Add(btnRemove);
+            listButtons.Controls.Add(_btnNewQuestion);
+            listButtons.Controls.Add(_btnRemoveQuestion);
             listPanel.Controls.Add(_lstQuestions);
             listPanel.Controls.Add(listButtons);
             listPanel.Controls.Add(lblQuestions);
@@ -285,12 +294,12 @@ namespace QuizGenAI.Forms.Teacher
                 Height = 52
             };
 
-            var btnApply = CreatePrimaryButton("Apply Question");
-            btnApply.Width = 140;
-            btnApply.Location = new Point(0, 4);
-            btnApply.Click += delegate { TryApplyQuestionChanges(); };
+            _btnApplyQuestion = CreatePrimaryButton("Apply Question");
+            _btnApplyQuestion.Width = 140;
+            _btnApplyQuestion.Location = new Point(0, 4);
+            _btnApplyQuestion.Click += delegate { TryApplyQuestionChanges(); };
 
-            questionButtons.Controls.Add(btnApply);
+            questionButtons.Controls.Add(_btnApplyQuestion);
             questionScrollPanel.Controls.Add(questionLayout);
             questionPanel.Controls.Add(questionScrollPanel);
             questionPanel.Controls.Add(questionButtons);
@@ -306,12 +315,12 @@ namespace QuizGenAI.Forms.Teacher
                 BackColor = Color.White
             };
 
-            var btnSaveDraft = CreatePrimaryButton("Save Draft");
-            btnSaveDraft.Width = 126;
-            btnSaveDraft.Location = new Point(0, 6);
-            btnSaveDraft.Click += delegate { SaveDraft(); };
+            _btnSaveDraft = CreatePrimaryButton("Save Draft");
+            _btnSaveDraft.Width = 126;
+            _btnSaveDraft.Location = new Point(0, 6);
+            _btnSaveDraft.Click += delegate { SaveDraft(); };
 
-            var btnCancel = new Button
+            _btnCancel = new Button
             {
                 Text = "Cancel",
                 Width = 104,
@@ -321,10 +330,10 @@ namespace QuizGenAI.Forms.Teacher
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI", 10.5F)
             };
-            btnCancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
+            _btnCancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 
-            bottomPanel.Controls.Add(btnSaveDraft);
-            bottomPanel.Controls.Add(btnCancel);
+            bottomPanel.Controls.Add(_btnSaveDraft);
+            bottomPanel.Controls.Add(_btnCancel);
 
             body.Controls.Add(editorArea);
             body.Controls.Add(metaPanel);
@@ -367,10 +376,13 @@ namespace QuizGenAI.Forms.Teacher
 
         private void LoadQuizIfNeeded()
         {
+            _isReadOnly = IsReadOnly;
+
             if (InitialQuizData != null)
             {
                 LoadQuizData(InitialQuizData);
-                BeginNewQuestion();
+                InitializeQuestionEditorState();
+                ApplyReadOnlyMode();
                 return;
             }
 
@@ -380,8 +392,21 @@ namespace QuizGenAI.Forms.Teacher
                 return;
             }
 
+            _isReadOnly = _isReadOnly || _quizService.IsQuizLockedForEditing(QuizId.Value);
             var quiz = _quizService.GetQuizEditor(QuizId.Value);
             LoadQuizData(quiz);
+            InitializeQuestionEditorState();
+            ApplyReadOnlyMode();
+        }
+
+        private void InitializeQuestionEditorState()
+        {
+            if (_isReadOnly && _questions.Count > 0)
+            {
+                _lstQuestions.SelectedIndex = 0;
+                return;
+            }
+
             BeginNewQuestion();
         }
 
@@ -601,6 +626,11 @@ namespace QuizGenAI.Forms.Teacher
         {
             try
             {
+                if (_isReadOnly)
+                {
+                    throw new InvalidOperationException("This posted quiz already has student submissions and is now view-only.");
+                }
+
                 TryCapturePendingQuestion();
 
                 var subject = _cmbSubject.SelectedItem as SubjectOptionDto;
@@ -763,6 +793,47 @@ namespace QuizGenAI.Forms.Teacher
                 DropDownStyle = dropDownList ? ComboBoxStyle.DropDownList : ComboBoxStyle.DropDown,
                 Font = new Font("Segoe UI", 12F)
             };
+        }
+
+        private void ApplyReadOnlyMode()
+        {
+            if (!_isReadOnly)
+            {
+                return;
+            }
+
+            _lblHeaderTitle.Text = "Quiz Viewer";
+            _lblHeaderSubtitle.Text = "This posted quiz has student submissions and is now view-only.";
+            _lblQuestionHint.Text = "View-only mode: editing is disabled because students already submitted answers.";
+
+            _txtTitle.ReadOnly = true;
+            _txtTopic.ReadOnly = true;
+            _txtQuestionText.ReadOnly = true;
+            _txtChoiceA.ReadOnly = true;
+            _txtChoiceB.ReadOnly = true;
+            _txtChoiceC.ReadOnly = true;
+            _txtChoiceD.ReadOnly = true;
+            _txtExplanation.ReadOnly = true;
+            _txtTitle.TabStop = false;
+            _txtTopic.TabStop = false;
+            _txtQuestionText.TabStop = false;
+            _txtChoiceA.TabStop = false;
+            _txtChoiceB.TabStop = false;
+            _txtChoiceC.TabStop = false;
+            _txtChoiceD.TabStop = false;
+            _txtExplanation.TabStop = false;
+
+            _cmbSubject.Enabled = false;
+            _cmbDifficulty.Enabled = false;
+            _cmbCorrectChoice.Enabled = false;
+            _nudDuration.Enabled = false;
+
+            _btnNewQuestion.Enabled = false;
+            _btnRemoveQuestion.Enabled = false;
+            _btnApplyQuestion.Enabled = false;
+            _btnSaveDraft.Visible = false;
+            _btnCancel.Text = "Close";
+            _btnCancel.Location = new Point(0, 6);
         }
     }
 }

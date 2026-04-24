@@ -15,6 +15,7 @@ namespace QuizGenAI.DTOs
         public int QuestionCount { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool CanPublish { get; set; }
+        public bool IsLockedForEditing { get; set; }
         public DateTime? AvailableFrom { get; set; }
         public DateTime? AvailableUntil { get; set; }
     }
