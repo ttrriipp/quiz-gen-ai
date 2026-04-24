@@ -42,11 +42,18 @@ namespace QuizGenAI.Forms.Teacher
 
         public int CurrentUserId { get; set; }
         public string DisplayName { get; set; }
+        public bool AutoOpenAiGenerator { get; set; }
 
-        protected override void OnShown(EventArgs e)
+        protected override async void OnShown(EventArgs e)
         {
             base.OnShown(e);
             LoadQuizCards();
+
+            if (AutoOpenAiGenerator)
+            {
+                AutoOpenAiGenerator = false;
+                await OpenAiGeneratorAsync();
+            }
         }
 
         private void BuildLayout()

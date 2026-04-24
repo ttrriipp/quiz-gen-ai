@@ -262,7 +262,8 @@ namespace QuizGenAI.Forms.Teacher
         {
             foreach (var pair in _navButtons)
             {
-                var isActive = pair.Key == sectionKey;
+                var isActive = pair.Key == sectionKey
+                    || (sectionKey == "generate-quiz" && pair.Key == "quizzes");
                 pair.Value.FillColor = isActive ? Color.FromArgb(14, 116, 144) : Color.FromArgb(31, 41, 55);
                 pair.Value.ForeColor = isActive ? Color.White : Color.FromArgb(229, 231, 235);
             }
@@ -280,7 +281,14 @@ namespace QuizGenAI.Forms.Teacher
                     _topBar.Visible = true;
                     _lblPageTitle.Text = "Quizzes";
                     _lblPageDescription.Text = "Manage draft, posted, and archived quizzes without leaving the teacher shell.";
-                    RenderHostedForm(CreateHostedQuizManager());
+                    RenderHostedForm(CreateHostedQuizManager(false));
+                    break;
+
+                case "generate-quiz":
+                    _topBar.Visible = true;
+                    _lblPageTitle.Text = "Generate Quiz";
+                    _lblPageDescription.Text = "Create an AI-generated draft and send it into the review editor.";
+                    RenderHostedForm(CreateHostedQuizManager(true));
                     break;
 
                 case "reports":
@@ -389,7 +397,7 @@ namespace QuizGenAI.Forms.Teacher
             };
             actionButton.Click += delegate
             {
-                ShowSection("quizzes");
+                ShowSection("generate-quiz");
             };
 
             row.Controls.Add(textHost, 0, 0);
@@ -1608,12 +1616,13 @@ namespace QuizGenAI.Forms.Teacher
                 bullets.ToArray());
         }
 
-        private Form CreateHostedQuizManager()
+        private Form CreateHostedQuizManager(bool autoOpenAiGenerator)
         {
             return new TeacherQuizzesForm
             {
                 CurrentUserId = CurrentUserId,
                 DisplayName = DisplayName,
+                AutoOpenAiGenerator = autoOpenAiGenerator,
                 TopLevel = false
             };
         }
