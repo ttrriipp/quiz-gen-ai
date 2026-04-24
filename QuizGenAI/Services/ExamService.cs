@@ -334,16 +334,14 @@ namespace QuizGenAI.Services
                             QuestionId = x.Id,
                             OrderIndex = x.OrderIndex,
                             QuestionText = x.Text,
-                            SelectedChoiceId = selectedChoiceId,
-                            CorrectChoiceId = correctChoiceId,
-                            Choices = x.Choices
+                            Explanation = x.Explanation,
+                            CorrectAnswerText = x.Choices
+                                .Where(c => c.IsCorrect)
                                 .OrderBy(c => c.OrderIndex)
-                                .Select(c => new StudentAttemptReviewChoiceDto
-                                {
-                                    ChoiceId = c.Id,
-                                    Text = c.Text
-                                })
-                                .ToList()
+                                .Select(c => c.Text)
+                                .FirstOrDefault(),
+                            SelectedChoiceId = selectedChoiceId,
+                            CorrectChoiceId = correctChoiceId
                         };
                     })
                     .ToList();

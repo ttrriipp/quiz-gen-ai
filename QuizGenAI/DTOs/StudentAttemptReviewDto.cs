@@ -23,14 +23,9 @@ namespace QuizGenAI.DTOs
         public int QuestionId { get; set; }
         public int OrderIndex { get; set; }
         public string QuestionText { get; set; }
+        public string Explanation { get; set; }
+        public string CorrectAnswerText { get; set; }
         public int? SelectedChoiceId { get; set; }
         public int? CorrectChoiceId { get; set; }
-        public List<StudentAttemptReviewChoiceDto> Choices { get; set; }
-    }
-
-    public class StudentAttemptReviewChoiceDto
-    {
-        public int ChoiceId { get; set; }
-        public string Text { get; set; }
     }
 }

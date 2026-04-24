@@ -170,16 +170,17 @@ namespace QuizGenAI.Forms.Student
 
         private static Panel CreateQuestionCard(StudentAttemptReviewQuestionDto question)
         {
-            var correctChoice = question.Choices
-                .FirstOrDefault(x => question.CorrectChoiceId.HasValue && x.ChoiceId == question.CorrectChoiceId.Value);
-            var answerText = correctChoice != null
-                ? correctChoice.Text
-                : "No correct answer configured";
+            var explanationText = string.IsNullOrWhiteSpace(question.Explanation)
+                ? "No explanation provided for this question."
+                : question.Explanation.Trim();
+            var answerText = string.IsNullOrWhiteSpace(question.CorrectAnswerText)
+                ? "No correct answer configured"
+                : question.CorrectAnswerText.Trim();
 
             var card = new Panel
             {
                 Width = 960,
-                Height = 214,
+                Height = 236,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 0, 0, 10),
@@ -205,43 +206,39 @@ namespace QuizGenAI.Forms.Student
                 Text = string.Format("Answer: {0}", answerText)
             };
 
-            var choicesPanel = new FlowLayoutPanel
+            var explanationPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoScroll = false,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 6, 0, 0)
             };
 
-            for (var i = 0; i < question.Choices.Count; i++)
+            var lblExplanationTitle = new Label
             {
-                var choice = question.Choices[i];
-                var prefix = i < 26 ? ((char)('A' + i)).ToString() : (i + 1).ToString();
-                var isSelected = question.SelectedChoiceId.HasValue && question.SelectedChoiceId.Value == choice.ChoiceId;
-                var isCorrect = question.CorrectChoiceId.HasValue && question.CorrectChoiceId.Value == choice.ChoiceId;
+                AutoSize = false,
+                Width = 900,
+                Height = 24,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Text = "Explanation"
+            };
+            explanationPanel.Controls.Add(lblExplanationTitle);
 
-                var label = new Label
-                {
-                    AutoSize = false,
-                    Width = 900,
-                    Height = 24,
-                    Font = new Font("Segoe UI", 9.8F),
-                    ForeColor = isSelected
-                        ? Color.FromArgb(15, 23, 42)
-                        : Color.FromArgb(71, 85, 105),
-                    Text = string.Format(
-                        "{0}) {1}{2}",
-                        prefix,
-                        choice.Text,
-                        isSelected ? "  (Your answer)" : string.Empty)
-                };
+            var lblExplanation = new Label
+            {
+                AutoSize = false,
+                Width = 900,
+                Height = 130,
+                Font = new Font("Segoe UI", 9.8F),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = explanationText
+            };
+            explanationPanel.Controls.Add(lblExplanation);
 
-                choicesPanel.Controls.Add(label);
-            }
-
-            card.Controls.Add(choicesPanel);
+            card.Controls.Add(explanationPanel);
             card.Controls.Add(lblAnswer);
             card.Controls.Add(lblQuestion);
             return card;
