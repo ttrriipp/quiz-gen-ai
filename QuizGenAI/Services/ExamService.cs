@@ -371,7 +371,7 @@ namespace QuizGenAI.Services
                 throw new InvalidOperationException("Students can only start published quizzes.");
             }
 
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             if (quiz.AvailableFrom.HasValue && quiz.AvailableFrom.Value > now)
             {
                 throw new InvalidOperationException("This quiz is not available yet.");

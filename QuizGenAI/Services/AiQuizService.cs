@@ -324,7 +324,8 @@ namespace QuizGenAI.Services
                 }
             }
 
-            if (int.TryParse(token, out var numericIndex))
+            int numericIndex;
+            if (int.TryParse(token, out numericIndex))
             {
                 if (numericIndex >= 1 && numericIndex <= normalizedChoices.Count)
                 {

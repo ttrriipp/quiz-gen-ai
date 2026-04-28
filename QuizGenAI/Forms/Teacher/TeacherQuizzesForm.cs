@@ -156,7 +156,7 @@ namespace QuizGenAI.Forms.Teacher
             var card = new Panel
             {
                 Width = cardW,
-                Height = 242,
+                Height = 264,
                 Margin = new Padding(0, 0, 12, 12),
                 BackColor = CardBg,
                 BorderStyle = BorderStyle.None
@@ -219,13 +219,25 @@ namespace QuizGenAI.Forms.Teacher
                 Location = new Point(px, 136)
             };
 
+            var lblAvailability = new Label
+            {
+                AutoSize = false,
+                Width = contentW,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(140, 165, 155),
+                Text = BuildAvailabilityDisplayText(quiz.AvailableFrom, quiz.AvailableUntil),
+                Location = new Point(px, 156),
+                AutoEllipsis = true
+            };
+
             // "Review & edit" – full-width primary button
             var btnEdit = new Button
             {
                 Text = quiz.IsLockedForEditing ? "View Quiz" : "Review && edit",
                 Width = contentW,
                 Height = 32,
-                Location = new Point(px, 164),
+                Location = new Point(px, 184),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(26, 90, 68),
                 ForeColor = Color.FromArgb(235, 243, 239),
@@ -242,7 +254,7 @@ namespace QuizGenAI.Forms.Teacher
                 Text = GetPrimaryStatusActionLabel(quiz),
                 Width = 92,
                 Height = 26,
-                Location = new Point(px, 202),
+                Location = new Point(px, 224),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -255,7 +267,7 @@ namespace QuizGenAI.Forms.Teacher
                 Text = quiz.Status == QuizStatus.Archived ? "Unarchive" : "Archive",
                 Width = 82,
                 Height = 26,
-                Location = new Point(px + 98, 202),
+                Location = new Point(px + 98, 224),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -267,7 +279,7 @@ namespace QuizGenAI.Forms.Teacher
                 Text = "Delete",
                 Width = 58,
                 Height = 26,
-                Location = new Point(px + 186, 202),
+                Location = new Point(px + 186, 224),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(240, 100, 90),
                 Font = new Font("Segoe UI", 8.5F),
@@ -279,6 +291,7 @@ namespace QuizGenAI.Forms.Teacher
             card.Controls.Add(btnArchive);
             card.Controls.Add(btnStatus);
             card.Controls.Add(btnEdit);
+            card.Controls.Add(lblAvailability);
             card.Controls.Add(lblMeta);
             card.Controls.Add(lblUpdated);
             card.Controls.Add(lblTopic);
@@ -538,6 +551,26 @@ namespace QuizGenAI.Forms.Teacher
                 case QuizStatus.Archived: return Color.FromArgb(60, 70, 80);
                 default: return Color.FromArgb(130, 92, 18);
             }
+        }
+
+        private static string BuildAvailabilityDisplayText(DateTime? availableFrom, DateTime? availableUntil)
+        {
+            if (availableFrom.HasValue && availableUntil.HasValue)
+            {
+                return string.Format("Open {0:g} - {1:g}", availableFrom.Value, availableUntil.Value);
+            }
+
+            if (availableFrom.HasValue)
+            {
+                return string.Format("Opens {0:g}", availableFrom.Value);
+            }
+
+            if (availableUntil.HasValue)
+            {
+                return string.Format("Closes {0:g}", availableUntil.Value);
+            }
+
+            return "No availability window";
         }
 
         private static void CardPanel_PaintRoundedBorder(object sender, PaintEventArgs e)

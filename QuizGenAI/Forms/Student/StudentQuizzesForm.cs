@@ -1199,7 +1199,7 @@ namespace QuizGenAI.Forms.Student
             var panel = new Panel
             {
                 Width = cardWidth,
-                Height = 228,
+                Height = 250,
                 BackColor = ReportsCardBg,
                 BorderStyle = BorderStyle.None,
                 Margin = new Padding(0, 0, 18, 18),
@@ -1265,9 +1265,22 @@ namespace QuizGenAI.Forms.Student
                 AutoEllipsis = true
             };
 
+            var lblSchedule = new Label
+            {
+                AutoSize = false,
+                Location = new Point(paddingX, 184),
+                Width = contentWidth,
+                Height = 18,
+                Font = new Font("Segoe UI", 8.25F),
+                ForeColor = ReportsTextMuted,
+                BackColor = Color.Transparent,
+                Text = BuildStudentScheduleDisplayText(quiz.AvailableFrom, quiz.AvailableUntil),
+                AutoEllipsis = true
+            };
+
             var btnStart = new Guna2Button
             {
-                Location = new Point(paddingX, 186),
+                Location = new Point(paddingX, 208),
                 Width = quiz.HasCompletedAttempt ? ((contentWidth - 10) / 2) : contentWidth,
                 Height = 34,
                 FillColor = quiz.CanStart ? ReportsMustard : ReportsInnerBg,
@@ -1291,7 +1304,7 @@ namespace QuizGenAI.Forms.Student
             {
                 var btnReview = new Guna2Button
                 {
-                    Location = new Point(paddingX + btnStart.Width + 10, 186),
+                    Location = new Point(paddingX + btnStart.Width + 10, 208),
                     Width = contentWidth - btnStart.Width - 10,
                     Height = 34,
                     FillColor = Color.FromArgb(22, 88, 61),
@@ -1308,6 +1321,7 @@ namespace QuizGenAI.Forms.Student
                 btnReview.Click += ReviewAnswers_Click;
                 panel.Controls.Add(btnReview);
             }
+            panel.Controls.Add(lblSchedule);
             panel.Controls.Add(lblAvailability);
             panel.Controls.Add(lblMeta);
             panel.Controls.Add(lblTopic);
@@ -1315,6 +1329,26 @@ namespace QuizGenAI.Forms.Student
             panel.Controls.Add(difficultyPill);
             panel.Controls.Add(subjectPill);
             return panel;
+        }
+
+        private static string BuildStudentScheduleDisplayText(DateTime? availableFrom, DateTime? availableUntil)
+        {
+            if (availableFrom.HasValue && availableUntil.HasValue)
+            {
+                return string.Format("Opens {0}  |  Deadline {1}", availableFrom.Value.ToString("MMM d, h:mm tt"), availableUntil.Value.ToString("MMM d, h:mm tt"));
+            }
+
+            if (availableFrom.HasValue)
+            {
+                return string.Format("Opens {0}", availableFrom.Value.ToString("MMM d, h:mm tt"));
+            }
+
+            if (availableUntil.HasValue)
+            {
+                return string.Format("Deadline {0}", availableUntil.Value.ToString("MMM d, h:mm tt"));
+            }
+
+            return "No deadline set";
         }
 
         private void StartQuiz_Click(object sender, EventArgs e)

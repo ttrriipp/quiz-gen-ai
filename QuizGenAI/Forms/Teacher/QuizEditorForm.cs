@@ -16,6 +16,10 @@ namespace QuizGenAI.Forms.Teacher
         private ComboBox _cmbSubject;
         private ComboBox _cmbDifficulty;
         private NumericUpDown _nudDuration;
+        private DateTimePicker _dtpAvailableFrom;
+        private DateTimePicker _dtpAvailableUntil;
+        private DateTimePicker _dtpAvailableFromTime;
+        private DateTimePicker _dtpAvailableUntilTime;
         private TextBox _txtTitle;
         private TextBox _txtTopic;
         private ListBox _lstQuestions;
@@ -113,14 +117,14 @@ namespace QuizGenAI.Forms.Teacher
 
             var metaPanel = CreateSurfacePanel();
             metaPanel.Dock = DockStyle.Top;
-            metaPanel.Height = 190;
+            metaPanel.Height = 256;
             metaPanel.Padding = new Padding(18);
 
             var metaLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 4,
-                RowCount = 4
+                RowCount = 5
             };
             metaLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90F));
             metaLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
@@ -129,7 +133,8 @@ namespace QuizGenAI.Forms.Teacher
             metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
             metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
             metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64F));
+            metaLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
 
             _txtTitle = CreateEditorTextBox();
             _txtTopic = CreateEditorTextBox();
@@ -144,6 +149,12 @@ namespace QuizGenAI.Forms.Teacher
                 Value = 20,
                 Font = new Font("Segoe UI", 11F)
             };
+            _dtpAvailableFrom = CreateScheduleDatePicker();
+            _dtpAvailableUntil = CreateScheduleDatePicker();
+            _dtpAvailableFromTime = CreateScheduleTimePicker();
+            _dtpAvailableUntilTime = CreateScheduleTimePicker();
+            _dtpAvailableFrom.ValueChanged += delegate { _dtpAvailableFromTime.Enabled = _dtpAvailableFrom.Checked && !_isReadOnly; };
+            _dtpAvailableUntil.ValueChanged += delegate { _dtpAvailableUntilTime.Enabled = _dtpAvailableUntil.Checked && !_isReadOnly; };
 
             metaLayout.Controls.Add(CreateFieldLabel("Title"), 0, 0);
             metaLayout.Controls.Add(_txtTitle, 1, 0);
@@ -160,6 +171,8 @@ namespace QuizGenAI.Forms.Teacher
             lblDurationUnit.TextAlign = ContentAlignment.MiddleLeft;
             lblDurationUnit.Margin = new Padding(8, 0, 0, 0);
             metaLayout.Controls.Add(lblDurationUnit, 2, 2);
+            metaLayout.Controls.Add(CreateScheduleInputPanel("Available from", _dtpAvailableFrom, _dtpAvailableFromTime), 1, 3);
+            metaLayout.Controls.Add(CreateScheduleInputPanel("Available until", _dtpAvailableUntil, _dtpAvailableUntilTime), 3, 3);
 
             metaPanel.Controls.Add(metaLayout);
 
@@ -416,6 +429,8 @@ namespace QuizGenAI.Forms.Teacher
             _txtTopic.Text = quiz.Topic;
             _nudDuration.Value = quiz.DurationMinutes > _nudDuration.Maximum ? _nudDuration.Maximum : quiz.DurationMinutes;
             _cmbDifficulty.SelectedItem = quiz.Difficulty;
+            ApplyScheduleValue(_dtpAvailableFrom, _dtpAvailableFromTime, quiz.AvailableFrom);
+            ApplyScheduleValue(_dtpAvailableUntil, _dtpAvailableUntilTime, quiz.AvailableUntil);
 
             for (var i = 0; i < _cmbSubject.Items.Count; i++)
             {
@@ -652,6 +667,8 @@ namespace QuizGenAI.Forms.Teacher
                     Difficulty = difficulty,
                     DurationMinutes = Convert.ToInt32(_nudDuration.Value),
                     Status = QuizStatus.Draft,
+                    AvailableFrom = BuildScheduleValue(_dtpAvailableFrom, _dtpAvailableFromTime),
+                    AvailableUntil = BuildScheduleValue(_dtpAvailableUntil, _dtpAvailableUntilTime),
                     Questions = _questions.ToList()
                 };
 
@@ -795,6 +812,86 @@ namespace QuizGenAI.Forms.Teacher
             };
         }
 
+        private static DateTimePicker CreateScheduleDatePicker()
+        {
+            return new DateTimePicker
+            {
+                Dock = DockStyle.Fill,
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "MMM d, yyyy",
+                Font = new Font("Segoe UI", 10F),
+                ShowCheckBox = true,
+                Checked = false,
+                Value = DateTime.Now.Date
+            };
+        }
+
+        private static DateTimePicker CreateScheduleTimePicker()
+        {
+            return new DateTimePicker
+            {
+                Dock = DockStyle.Right,
+                Width = 92,
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "h:mm tt",
+                Font = new Font("Segoe UI", 10F),
+                ShowUpDown = true,
+                Enabled = false,
+                Value = DateTime.Today.AddHours(8)
+            };
+        }
+
+        private static Control CreateScheduleInputPanel(string labelText, DateTimePicker datePicker, DateTimePicker timePicker)
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0, 0, 12, 0)
+            };
+
+            var label = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 18,
+                Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(55, 65, 81),
+                Text = labelText,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var inputRow = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0, 4, 0, 0)
+            };
+            inputRow.Controls.Add(datePicker);
+            inputRow.Controls.Add(timePicker);
+
+            panel.Controls.Add(inputRow);
+            panel.Controls.Add(label);
+            return panel;
+        }
+
+        private static void ApplyScheduleValue(DateTimePicker datePicker, DateTimePicker timePicker, DateTime? value)
+        {
+            var localValue = value.HasValue ? value.Value : DateTime.Now.AddHours(1);
+
+            datePicker.Value = localValue.Date;
+            datePicker.Checked = value.HasValue;
+            timePicker.Value = DateTime.Today.Add(localValue.TimeOfDay);
+            timePicker.Enabled = value.HasValue;
+        }
+
+        private static DateTime? BuildScheduleValue(DateTimePicker datePicker, DateTimePicker timePicker)
+        {
+            if (!datePicker.Checked)
+            {
+                return null;
+            }
+
+            return datePicker.Value.Date.Add(timePicker.Value.TimeOfDay);
+        }
+
         private void ApplyReadOnlyMode()
         {
             if (!_isReadOnly)
@@ -827,6 +924,10 @@ namespace QuizGenAI.Forms.Teacher
             _cmbDifficulty.Enabled = false;
             _cmbCorrectChoice.Enabled = false;
             _nudDuration.Enabled = false;
+            _dtpAvailableFrom.Enabled = false;
+            _dtpAvailableUntil.Enabled = false;
+            _dtpAvailableFromTime.Enabled = false;
+            _dtpAvailableUntilTime.Enabled = false;
 
             _btnNewQuestion.Enabled = false;
             _btnRemoveQuestion.Enabled = false;

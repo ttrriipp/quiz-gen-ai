@@ -35,7 +35,7 @@ namespace QuizGenAI.Services
 
             using (var context = new QuizGenAIDbContext())
             {
-                var now = DateTime.UtcNow;
+                var now = DateTime.Now;
                 var quizzes = context.Quizzes
                     .Include(x => x.Subject)
                     .Include(x => x.Questions)
@@ -161,6 +161,8 @@ namespace QuizGenAI.Services
                     DurationMinutes = quiz.DurationMinutes,
                     Status = quiz.Status,
                     IsAiGenerated = quiz.AiGenerated,
+                    AvailableFrom = quiz.AvailableFrom,
+                    AvailableUntil = quiz.AvailableUntil,
                     Questions = quiz.Questions
                         .OrderBy(x => x.OrderIndex)
                         .Select(x => new QuizQuestionEditorDto
@@ -243,6 +245,8 @@ namespace QuizGenAI.Services
                 quiz.Status = QuizStatus.Draft;
                 quiz.UpdatedAt = now;
                 quiz.AiGenerated = quizEditor.IsAiGenerated;
+                quiz.AvailableFrom = quizEditor.AvailableFrom;
+                quiz.AvailableUntil = quizEditor.AvailableUntil;
 
                 var questionOrder = 1;
                 foreach (var questionEditor in quizEditor.Questions)
@@ -511,6 +515,13 @@ namespace QuizGenAI.Services
                 throw new InvalidOperationException("Difficulty is required.");
             }
 
+            if (quizEditor.AvailableFrom.HasValue &&
+                quizEditor.AvailableUntil.HasValue &&
+                quizEditor.AvailableUntil.Value <= quizEditor.AvailableFrom.Value)
+            {
+                throw new InvalidOperationException("Available until must be later than available from.");
+            }
+
             if (quizEditor.Questions == null || quizEditor.Questions.Count == 0)
             {
                 throw new InvalidOperationException("A quiz draft must contain at least one question.");
@@ -583,17 +594,17 @@ namespace QuizGenAI.Services
         {
             if (availableFrom.HasValue && availableFrom.Value > now)
             {
-                return string.Format("Opens {0}", availableFrom.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+                return string.Format("Opens {0}", availableFrom.Value.ToString("MMM d, yyyy h:mm tt"));
             }
 
             if (availableUntil.HasValue && availableUntil.Value < now)
             {
-                return string.Format("Closed {0}", availableUntil.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+                return string.Format("Closed {0}", availableUntil.Value.ToString("MMM d, yyyy h:mm tt"));
             }
 
             if (availableUntil.HasValue)
             {
-                return string.Format("Available until {0}", availableUntil.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt"));
+                return string.Format("Available until {0}", availableUntil.Value.ToString("MMM d, yyyy h:mm tt"));
             }
 
             return "Available now";

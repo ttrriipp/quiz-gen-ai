@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using QuizGenAI.Enums;
 
 namespace QuizGenAI.DTOs
@@ -18,6 +19,8 @@ namespace QuizGenAI.DTOs
         public int DurationMinutes { get; set; }
         public QuizStatus Status { get; set; }
         public bool IsAiGenerated { get; set; }
+        public DateTime? AvailableFrom { get; set; }
+        public DateTime? AvailableUntil { get; set; }
         public string AiGenerationPrompt { get; set; }
         public string AiGenerationRawResponseJson { get; set; }
         public string AiGenerationProvider { get; set; }
