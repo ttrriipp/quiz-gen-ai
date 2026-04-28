@@ -442,6 +442,36 @@ namespace QuizGenAI.Services
             }
         }
 
+        public void UnarchiveQuiz(int quizId, int userId)
+        {
+            using (var context = new QuizGenAIDbContext())
+            {
+                EnsureTeacherOrAdmin(context, userId);
+
+                var quiz = context.Quizzes.SingleOrDefault(x => x.Id == quizId);
+                if (quiz == null)
+                {
+                    throw new InvalidOperationException("Quiz not found.");
+                }
+
+                if (quiz.IsDeleted)
+                {
+                    throw new InvalidOperationException("This quiz is no longer available.");
+                }
+
+                if (quiz.Status != QuizStatus.Archived)
+                {
+                    throw new InvalidOperationException("Only archived quizzes can be restored.");
+                }
+
+                quiz.Status = QuizStatus.Draft;
+                quiz.UpdatedAt = DateTime.UtcNow;
+                context.SaveChanges();
+
+                LoggingService.Information("Quiz unarchived to draft. QuizId={QuizId} UserId={UserId} Title={Title}", quizId, userId, quiz.Title);
+            }
+        }
+
         private static void EnsureTeacherOrAdmin(QuizGenAIDbContext context, int userId)
         {
             var allowed = context.UserRoles.Any(x =>

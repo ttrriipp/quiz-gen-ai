@@ -241,26 +241,26 @@ namespace QuizGenAI.Forms.Teacher
                 Cursor = Cursors.Hand
             };
             btnStatus.Click += delegate { HandlePrimaryStatusAction(quiz); };
+            btnStatus.Enabled = quiz.Status != QuizStatus.Archived;
 
             var btnArchive = new Button
             {
-                Text = "Archive",
-                Width = 70,
+                Text = quiz.Status == QuizStatus.Archived ? "Unarchive" : "Archive",
+                Width = 82,
                 Height = 26,
                 Location = new Point(px + 98, 202),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
             };
-            btnArchive.Click += delegate { ArchiveQuiz(quiz); };
-            btnArchive.Enabled = quiz.Status != QuizStatus.Archived;
+            btnArchive.Click += delegate { ToggleArchiveState(quiz); };
 
             var btnDelete = new Button
             {
                 Text = "Delete",
-                Width = 70,
+                Width = 58,
                 Height = 26,
-                Location = new Point(px + 174, 202),
+                Location = new Point(px + 186, 202),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.FromArgb(240, 100, 90),
                 Font = new Font("Segoe UI", 8.5F),
@@ -433,10 +433,11 @@ namespace QuizGenAI.Forms.Teacher
             }
         }
 
-        private void ArchiveQuiz(QuizListItemDto quiz)
+        private void ToggleArchiveState(QuizListItemDto quiz)
         {
             if (quiz.Status == QuizStatus.Archived)
             {
+                RestoreArchivedQuiz(quiz);
                 return;
             }
 
@@ -464,6 +465,32 @@ namespace QuizGenAI.Forms.Teacher
             }
         }
 
+        private void RestoreArchivedQuiz(QuizListItemDto quiz)
+        {
+            var confirmation = MessageBox.Show(
+                string.Format("Restore the quiz \"{0}\" back to drafts?", quiz.Title),
+                "Confirm Unarchive",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirmation != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                _quizService.UnarchiveQuiz(quiz.Id, CurrentUserId);
+                NotificationHelper.ShowSuccess(this, "Quiz Restored", string.Format("\"{0}\" was moved back to drafts.", quiz.Title));
+                LoadQuizCards();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error(ex, "Quiz unarchive failed. QuizId={QuizId}", quiz.Id);
+                NotificationHelper.ShowError(this, "Unarchive Failed", ex.Message);
+            }
+        }
+
         private static Button CreateActionButton(string text)
         {
             var button = new Button
@@ -483,7 +510,12 @@ namespace QuizGenAI.Forms.Teacher
 
         private static string GetPrimaryStatusActionLabel(QuizListItemDto quiz)
         {
-            return quiz.Status == QuizStatus.Published ? "Draft" : "Post";
+            if (quiz.Status == QuizStatus.Published)
+            {
+                return "Draft";
+            }
+
+            return quiz.Status == QuizStatus.Archived ? "Locked" : "Post";
         }
 
         private static string GetStatusDisplayText(QuizStatus status)
