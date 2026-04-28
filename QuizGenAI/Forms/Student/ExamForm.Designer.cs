@@ -217,8 +217,8 @@ namespace QuizGenAI.Forms.Student
             // pnlActionPanelD
             this.pnlActionPanelD.AutoSize = true;
             this.pnlActionPanelD.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.pnlActionPanelD.Controls.Add(this.btnPrimaryD);
             this.pnlActionPanelD.Controls.Add(this.btnPreviousD);
+            this.pnlActionPanelD.Controls.Add(this.btnPrimaryD);
             this.pnlActionPanelD.Dock = System.Windows.Forms.DockStyle.Right;
             this.pnlActionPanelD.FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight;
             this.pnlActionPanelD.Margin = new System.Windows.Forms.Padding(0);

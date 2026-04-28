@@ -347,8 +347,8 @@ namespace QuizGenAI.Forms.Student
                 Text = "Selections are saved as you move between questions."
             };
 
-            actionPanel.Controls.Add(_btnPrimaryAction);
             actionPanel.Controls.Add(_btnPrevious);
+            actionPanel.Controls.Add(_btnPrimaryAction);
 
             panel.Controls.Add(actionPanel);
             panel.Controls.Add(leftNote);
