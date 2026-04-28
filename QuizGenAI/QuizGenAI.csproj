@@ -178,6 +178,7 @@
     <Compile Include="DTOs\TeacherReportsDto.cs" />
     <Compile Include="Enums\QuestionType.cs" />
     <Compile Include="Enums\QuizDifficulty.cs" />
+    <Compile Include="Helpers\AiApiConfiguration.cs" />
     <Compile Include="Enums\QuizStatus.cs" />
     <Compile Include="Enums\UserRole.cs" />
     <Compile Include="Form1.cs">

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -10,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
+using QuizGenAI.Helpers;
 
 namespace QuizGenAI.Services
 {
@@ -20,8 +20,8 @@ namespace QuizGenAI.Services
             ValidateRequest(request);
 
             var prompt = BuildPrompt(request);
-            var baseUrl = ConfigurationManager.AppSettings["AiApiBaseUrl"];
-            var apiKey = ConfigurationManager.AppSettings["AiApiKey"];
+            var baseUrl = AiApiConfiguration.GetBaseUrl();
+            var apiKey = AiApiConfiguration.GetApiKey();
 
             LoggingService.Information(
                 "AI quiz generation started. Subject={Subject} Topic={Topic} Difficulty={Difficulty} QuestionCount={QuestionCount} SourceDocument={SourceDocument}",
@@ -34,6 +34,12 @@ namespace QuizGenAI.Services
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
                 LoggingService.Warning("AI quiz generation is using the fallback generator because no AI API base URL is configured.");
+                return BuildFallbackResult(request, prompt);
+            }
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                LoggingService.Warning("AI quiz generation is using the fallback generator because no AI API key is configured.");
                 return BuildFallbackResult(request, prompt);
             }
 
@@ -89,24 +95,26 @@ namespace QuizGenAI.Services
                         if (isTransient && attempt < maxAttempts)
                         {
                             LoggingService.Warning(
-                                "AI quiz generation transient failure (Attempt {Attempt}/{MaxAttempts}) StatusCode={StatusCode}. Retrying.",
+                                "AI quiz generation transient failure (Attempt {Attempt}/{MaxAttempts}) StatusCode={StatusCode} Details={Details}. Retrying.",
                                 attempt,
                                 maxAttempts,
-                                response.StatusCode);
+                                response.StatusCode,
+                                AiApiConfiguration.GetSafeResponseDetail(responseContent));
                             await Task.Delay(attempt * 1200).ConfigureAwait(false);
                             continue;
                         }
 
-                        var details = string.IsNullOrWhiteSpace(responseContent)
-                            ? "No response body was returned."
-                            : responseContent;
+                        var details = AiApiConfiguration.GetSafeResponseDetail(responseContent);
                         var statusCode = (int)response.StatusCode;
                         var hasLeakedKeySignal = !string.IsNullOrWhiteSpace(responseContent) &&
                             responseContent.IndexOf("leaked", StringComparison.OrdinalIgnoreCase) >= 0;
 
                         if (isTransient)
                         {
-                            LoggingService.Warning("AI service remained unavailable after retries. Falling back to local generator. StatusCode={StatusCode}", response.StatusCode);
+                            LoggingService.Warning(
+                                "AI service remained unavailable after retries. Falling back to local generator. StatusCode={StatusCode} Details={Details}",
+                                response.StatusCode,
+                                details);
                             return BuildFallbackResult(request, prompt);
                         }
 

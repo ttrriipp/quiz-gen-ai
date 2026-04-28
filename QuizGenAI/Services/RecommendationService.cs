@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.Entity;
 using System.Linq;
 using System.Net.Http;
@@ -9,6 +8,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QuizGenAI.Data;
 using QuizGenAI.DTOs;
+using QuizGenAI.Helpers;
 
 namespace QuizGenAI.Services
 {
@@ -39,11 +39,17 @@ namespace QuizGenAI.Services
                 context = BuildRecommendationContext(attempt);
             }
 
-            var baseUrl = ConfigurationManager.AppSettings["AiApiBaseUrl"];
-            var apiKey = ConfigurationManager.AppSettings["AiApiKey"];
+            var baseUrl = AiApiConfiguration.GetBaseUrl();
+            var apiKey = AiApiConfiguration.GetApiKey();
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
                 LoggingService.Warning("Recommendation generation is using fallback because no AI API base URL is configured. AttemptId={AttemptId}", attemptId);
+                return BuildFallbackRecommendations(context, "Demo Fallback");
+            }
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                LoggingService.Warning("Recommendation generation is using fallback because no AI API key is configured. AttemptId={AttemptId}", attemptId);
                 return BuildFallbackRecommendations(context, "Demo Fallback");
             }
 
@@ -84,7 +90,11 @@ namespace QuizGenAI.Services
                         var responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                         if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(responseContent))
                         {
-                            LoggingService.Warning("Recommendation generation fell back after AI API error. AttemptId={AttemptId} StatusCode={StatusCode}", attemptId, response.StatusCode);
+                            LoggingService.Warning(
+                                "Recommendation generation fell back after AI API error. AttemptId={AttemptId} StatusCode={StatusCode} Details={Details}",
+                                attemptId,
+                                response.StatusCode,
+                                AiApiConfiguration.GetSafeResponseDetail(responseContent));
                             return BuildFallbackRecommendations(context, "Fallback After AI Error");
                         }
 
