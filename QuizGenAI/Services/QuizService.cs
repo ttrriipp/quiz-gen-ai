@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
+using System.Text.RegularExpressions;
 using QuizGenAI.Data;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
@@ -173,7 +174,7 @@ namespace QuizGenAI.Services
                                 .OrderBy(c => c.OrderIndex)
                                 .Select(c => new QuizChoiceEditorDto
                                 {
-                                    Text = c.Text,
+                                    Text = StripChoicePrefix(c.Text),
                                     IsCorrect = c.IsCorrect
                                 })
                                 .ToList()
@@ -266,7 +267,7 @@ namespace QuizGenAI.Services
                     {
                         question.Choices.Add(new Choice
                         {
-                            Text = choiceEditor.Text.Trim(),
+                            Text = StripChoicePrefix(choiceEditor.Text),
                             IsCorrect = choiceEditor.IsCorrect,
                             OrderIndex = choiceOrder
                         });
@@ -608,6 +609,16 @@ namespace QuizGenAI.Services
             }
 
             return "Available now";
+        }
+
+        private static string StripChoicePrefix(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(value.Trim(), @"^(?:choice|option|answer)?\s*[\(\[]?(?:[A-Da-d]|[1-4])[\)\].:-]\s*", string.Empty).Trim();
         }
     }
 }

@@ -199,6 +199,9 @@
     <Compile Include="Forms\Student\StudentAttemptReviewForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\Student\StudentAttemptReviewForm.Designer.cs">
+      <DependentUpon>StudentAttemptReviewForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Student\ExamForm.Designer.cs">
       <DependentUpon>ExamForm.cs</DependentUpon>
     </Compile>
@@ -273,6 +276,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Student\StudentResultsForm.resx">
       <DependentUpon>StudentResultsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Teacher\AiQuizGeneratorForm.resx">
+      <DependentUpon>AiQuizGeneratorForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Teacher\QuizEditorForm.resx">
       <DependentUpon>QuizEditorForm.cs</DependentUpon>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using QuizGenAI.DTOs;
 using QuizGenAI.Enums;
@@ -481,7 +482,7 @@ namespace QuizGenAI.Forms.Teacher
                 var answerPrefix = correctChoiceIndex < 26
                     ? ((char)('A' + correctChoiceIndex)).ToString()
                     : (correctChoiceIndex + 1).ToString();
-                var answerText = choices[correctChoiceIndex] != null ? choices[correctChoiceIndex].Text : string.Empty;
+                var answerText = choices[correctChoiceIndex] != null ? StripChoicePrefix(choices[correctChoiceIndex].Text) : string.Empty;
                 lines.Add(string.Format("    Answer: {0}) {1}", answerPrefix, answerText));
             }
 
@@ -573,10 +574,10 @@ namespace QuizGenAI.Forms.Teacher
             _txtExplanation.Text = question.Explanation;
 
             var choices = question.Choices.ToList();
-            _txtChoiceA.Text = choices.Count > 0 ? choices[0].Text : string.Empty;
-            _txtChoiceB.Text = choices.Count > 1 ? choices[1].Text : string.Empty;
-            _txtChoiceC.Text = choices.Count > 2 ? choices[2].Text : string.Empty;
-            _txtChoiceD.Text = choices.Count > 3 ? choices[3].Text : string.Empty;
+            _txtChoiceA.Text = choices.Count > 0 ? StripChoicePrefix(choices[0].Text) : string.Empty;
+            _txtChoiceB.Text = choices.Count > 1 ? StripChoicePrefix(choices[1].Text) : string.Empty;
+            _txtChoiceC.Text = choices.Count > 2 ? StripChoicePrefix(choices[2].Text) : string.Empty;
+            _txtChoiceD.Text = choices.Count > 3 ? StripChoicePrefix(choices[3].Text) : string.Empty;
             _cmbCorrectChoice.SelectedIndex = Math.Max(0, choices.FindIndex(x => x.IsCorrect));
             _lblQuestionHint.Text = string.Format("Editing question {0}. Click Apply Question to keep your changes.", _lstQuestions.SelectedIndex + 1);
         }
@@ -733,12 +734,22 @@ namespace QuizGenAI.Forms.Teacher
             {
                 question.Choices.Add(new QuizChoiceEditorDto
                 {
-                    Text = choices[i].Trim(),
+                    Text = StripChoicePrefix(choices[i]),
                     IsCorrect = i == correctIndex
                 });
             }
 
             return question;
+        }
+
+        private static string StripChoicePrefix(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(value.Trim(), @"^(?:choice|option|answer)?\s*[\(\[]?(?:[A-Da-d]|[1-4])[\)\].:-]\s*", string.Empty).Trim();
         }
 
         private static Control CreateFieldLabel(string text)

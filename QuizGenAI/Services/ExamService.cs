@@ -329,6 +329,13 @@ namespace QuizGenAI.Services
                             .Select(c => (int?)c.Id)
                             .FirstOrDefault();
 
+                        var selectedAnswerText = selectedChoiceId.HasValue
+                            ? x.Choices
+                                .Where(c => c.Id == selectedChoiceId.Value)
+                                .Select(c => c.Text)
+                                .FirstOrDefault()
+                            : null;
+
                         return new StudentAttemptReviewQuestionDto
                         {
                             QuestionId = x.Id,
@@ -340,8 +347,10 @@ namespace QuizGenAI.Services
                                 .OrderBy(c => c.OrderIndex)
                                 .Select(c => c.Text)
                                 .FirstOrDefault(),
+                            SelectedAnswerText = selectedAnswerText,
                             SelectedChoiceId = selectedChoiceId,
-                            CorrectChoiceId = correctChoiceId
+                            CorrectChoiceId = correctChoiceId,
+                            IsCorrect = selectedChoiceId.HasValue && correctChoiceId.HasValue && selectedChoiceId.Value == correctChoiceId.Value
                         };
                     })
                     .ToList();

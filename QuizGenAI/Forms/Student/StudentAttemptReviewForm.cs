@@ -7,9 +7,24 @@ using QuizGenAI.Helpers;
 
 namespace QuizGenAI.Forms.Student
 {
-    public class StudentAttemptReviewForm : Form
+    public partial class StudentAttemptReviewForm : Form
     {
+        private static readonly Color HeroBg = Color.FromArgb(20, 99, 67);
+        private static readonly Color HeroAccent = Color.FromArgb(229, 190, 77);
+        private static readonly Color TextPrimary = Color.FromArgb(15, 23, 42);
+        private static readonly Color TextMuted = Color.FromArgb(100, 116, 139);
+        private static readonly Color CorrectBg = Color.FromArgb(236, 253, 245);
+        private static readonly Color CorrectText = Color.FromArgb(4, 120, 87);
+        private static readonly Color WrongBg = Color.FromArgb(254, 242, 242);
+        private static readonly Color WrongText = Color.FromArgb(185, 28, 28);
+
         private readonly StudentAttemptReviewDto _review;
+
+        public StudentAttemptReviewForm()
+        {
+            _review = new StudentAttemptReviewDto();
+            InitializeComponent();
+        }
 
         public StudentAttemptReviewForm(StudentAttemptReviewDto review)
         {
@@ -19,6 +34,7 @@ namespace QuizGenAI.Forms.Student
             }
 
             _review = review;
+            InitializeComponent();
             BuildLayout();
             AppTheme.ApplyCognitaTheme(this);
         }
@@ -42,9 +58,9 @@ namespace QuizGenAI.Forms.Student
                 RowCount = 3,
                 Padding = new Padding(20)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 188F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 58F));
 
             root.Controls.Add(BuildHeaderPanel(), 0, 0);
             root.Controls.Add(BuildQuestionsPanel(), 0, 1);
@@ -56,48 +72,99 @@ namespace QuizGenAI.Forms.Student
 
         private Control BuildHeaderPanel()
         {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(20, 16, 20, 16);
-            panel.Margin = new Padding(0, 0, 0, 12);
-
-            var lblTitle = new Label
+            var panel = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 36,
-                Font = new Font("Segoe UI Semibold", 20F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Text = _review.QuizTitle
+                Dock = DockStyle.Fill,
+                BackColor = HeroBg,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(24, 20, 24, 20),
+                Margin = new Padding(0, 0, 0, 18)
             };
 
-            var lblMeta = new Label
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 330F));
+
+            var titleStack = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+
+            titleStack.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = 30,
+                Font = new Font("Segoe UI", 10.5F),
+                ForeColor = Color.FromArgb(218, 232, 224),
+                Text = string.Format("{0} | Submitted {1}", NullIfWhite(_review.SubjectName, "Unknown Subject"), NullIfWhite(_review.SubmittedAtDisplay, "N/A"))
+            });
+            titleStack.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 62,
+                Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Text = NullIfWhite(_review.QuizTitle, "Quiz Review")
+            });
+            titleStack.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
                 Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(71, 85, 105),
-                Text = string.Format("{0} | Score: {1:0.#}% | Submitted: {2}", _review.SubjectName, _review.ScorePercentage, _review.SubmittedAtDisplay)
-            };
+                ForeColor = Color.FromArgb(218, 232, 224),
+                Text = string.Format("Topic: {0}", NullIfWhite(_review.Topic, "N/A"))
+            });
 
-            var lblTopic = new Label
+            var metricPanel = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Text = string.IsNullOrWhiteSpace(_review.Topic) ? "Topic: N/A" : string.Format("Topic: {0}", _review.Topic)
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 1,
+                BackColor = Color.Transparent
             };
+            metricPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            metricPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            metricPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
 
-            panel.Controls.Add(lblTopic);
-            panel.Controls.Add(lblMeta);
-            panel.Controls.Add(lblTitle);
+            var total = _review.Questions == null ? 0 : _review.Questions.Count;
+            var correct = _review.Questions == null ? 0 : _review.Questions.Count(x => x.IsCorrect);
+            var missed = Math.Max(0, total - correct);
+            metricPanel.Controls.Add(CreateMetricBlock("Score", string.Format("{0:0.#}%", _review.ScorePercentage)), 0, 0);
+            metricPanel.Controls.Add(CreateMetricBlock("Correct", correct.ToString()), 1, 0);
+            metricPanel.Controls.Add(CreateMetricBlock("Missed", missed.ToString()), 2, 0);
+
+            layout.Controls.Add(titleStack, 0, 0);
+            layout.Controls.Add(metricPanel, 1, 0);
+            panel.Controls.Add(layout);
             return panel;
         }
 
         private Control BuildQuestionsPanel()
         {
-            var panel = CreateSurfacePanel();
-            panel.Padding = new Padding(16, 12, 16, 12);
-            panel.Margin = new Padding(0, 0, 0, 12);
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(18, 16, 18, 16),
+                Margin = new Padding(0, 0, 0, 18)
+            };
+
+            var header = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold),
+                ForeColor = TextPrimary,
+                Text = "Answer Review"
+            };
 
             var content = new FlowLayoutPanel
             {
@@ -105,18 +172,18 @@ namespace QuizGenAI.Forms.Student
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0)
+                BackColor = Color.FromArgb(250, 251, 247),
+                Padding = new Padding(0, 10, 0, 0)
             };
 
-            if (_review.Questions.Count == 0)
+            if (_review.Questions == null || _review.Questions.Count == 0)
             {
                 content.Controls.Add(new Label
                 {
-                    Width = 840,
-                    Height = 48,
-                    Font = new Font("Segoe UI", 10F),
-                    ForeColor = Color.FromArgb(100, 116, 139),
+                    Width = 900,
+                    Height = 64,
+                    Font = new Font("Segoe UI", 10.5F),
+                    ForeColor = TextMuted,
                     Text = "No question data was found for this attempt."
                 });
             }
@@ -129,6 +196,7 @@ namespace QuizGenAI.Forms.Student
             }
 
             panel.Controls.Add(content);
+            panel.Controls.Add(header);
             return panel;
         }
 
@@ -140,119 +208,173 @@ namespace QuizGenAI.Forms.Student
                 BackColor = Color.Transparent
             };
 
-            var btnClose = new Button
+            var flow = new FlowLayoutPanel
             {
-                Width = 140,
-                Height = 40,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(15, 118, 110),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                Text = "Close",
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.Location = new Point(Math.Max(0, panel.Width - btnClose.Width), 8);
+
+            var btnClose = CreateActionButton("Back To Quizzes", Color.FromArgb(22, 88, 61), Color.White);
             btnClose.Click += delegate
             {
                 DialogResult = DialogResult.OK;
                 Close();
             };
-            panel.Resize += delegate
-            {
-                btnClose.Location = new Point(Math.Max(0, panel.ClientSize.Width - btnClose.Width), 8);
-            };
 
-            panel.Controls.Add(btnClose);
+            flow.Controls.Add(btnClose);
+            panel.Controls.Add(flow);
             return panel;
         }
 
-        private static Panel CreateQuestionCard(StudentAttemptReviewQuestionDto question)
+        private static Control CreateMetricBlock(string title, string value)
         {
-            var explanationText = string.IsNullOrWhiteSpace(question.Explanation)
-                ? "No explanation provided for this question."
-                : question.Explanation.Trim();
-            var answerText = string.IsNullOrWhiteSpace(question.CorrectAnswerText)
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(16, 78, 56),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(8, 4, 0, 4),
+                Padding = new Padding(10, 12, 10, 10)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI Semibold", 20F, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = value
+            });
+            panel.Controls.Add(new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = HeroAccent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = title
+            });
+
+            return panel;
+        }
+
+        private static Control CreateQuestionCard(StudentAttemptReviewQuestionDto question)
+        {
+            var selectedText = string.IsNullOrWhiteSpace(question.SelectedAnswerText)
+                ? "No answer selected"
+                : question.SelectedAnswerText.Trim();
+            var correctText = string.IsNullOrWhiteSpace(question.CorrectAnswerText)
                 ? "No correct answer configured"
                 : question.CorrectAnswerText.Trim();
+            var explanationText = string.IsNullOrWhiteSpace(question.Explanation)
+                ? "No explanation was provided for this question."
+                : question.Explanation.Trim();
 
             var card = new Panel
             {
-                Width = 960,
-                Height = 236,
+                Width = 980,
+                Height = 190,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Margin = new Padding(0, 0, 0, 10),
-                Padding = new Padding(14, 12, 14, 12)
+                Margin = new Padding(0, 0, 0, 12),
+                Padding = new Padding(16, 14, 16, 14)
             };
 
-            var lblQuestion = new Label
+            var status = question.IsCorrect ? "Correct" : (question.SelectedChoiceId.HasValue ? "Incorrect" : "Unanswered");
+            var statusBg = question.IsCorrect ? CorrectBg : WrongBg;
+            var statusText = question.IsCorrect ? CorrectText : WrongText;
+
+            var badge = new Label
             {
-                Dock = DockStyle.Top,
-                Height = 26,
+                Width = 112,
+                Height = 28,
+                Location = new Point(card.Width - 144, 14),
+                Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold),
+                BackColor = statusBg,
+                ForeColor = statusText,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = status,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            var questionLabel = new Label
+            {
+                Location = new Point(16, 14),
+                Size = new Size(790, 46),
                 Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
+                ForeColor = TextPrimary,
                 Text = string.Format("Q{0}. {1}", question.OrderIndex, question.QuestionText)
             };
 
-            var lblAnswer = new Label
+            var selectedLabel = new Label
             {
-                Dock = DockStyle.Bottom,
-                Height = 26,
-                Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                TextAlign = ContentAlignment.MiddleRight,
-                Text = string.Format("Answer: {0}", answerText)
+                Location = new Point(16, 66),
+                Size = new Size(460, 30),
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = TextMuted,
+                Text = string.Format("Your answer: {0}", selectedText)
             };
 
-            var explanationPanel = new FlowLayoutPanel
+            var correctLabel = new Label
             {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = false,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 6, 0, 0)
+                Location = new Point(500, 66),
+                Size = new Size(430, 30),
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = TextMuted,
+                Text = string.Format("Correct answer: {0}", correctText)
             };
 
-            var lblExplanationTitle = new Label
+            var explanationTitle = new Label
             {
-                AutoSize = false,
-                Width = 900,
-                Height = 24,
+                Location = new Point(16, 102),
+                Size = new Size(920, 22),
                 Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
+                ForeColor = TextPrimary,
                 Text = "Explanation"
             };
-            explanationPanel.Controls.Add(lblExplanationTitle);
 
-            var lblExplanation = new Label
+            var explanationLabel = new Label
             {
-                AutoSize = false,
-                Width = 900,
-                Height = 130,
-                Font = new Font("Segoe UI", 9.8F),
-                ForeColor = Color.FromArgb(71, 85, 105),
+                Location = new Point(16, 126),
+                Size = new Size(920, 44),
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = TextMuted,
                 Text = explanationText
             };
-            explanationPanel.Controls.Add(lblExplanation);
 
-            card.Controls.Add(explanationPanel);
-            card.Controls.Add(lblAnswer);
-            card.Controls.Add(lblQuestion);
+            card.Controls.Add(badge);
+            card.Controls.Add(questionLabel);
+            card.Controls.Add(selectedLabel);
+            card.Controls.Add(correctLabel);
+            card.Controls.Add(explanationTitle);
+            card.Controls.Add(explanationLabel);
             return card;
         }
 
-        private static Panel CreateSurfacePanel()
+        private static Button CreateActionButton(string text, Color backColor, Color foreColor)
         {
-            return new Panel
+            var button = new Button
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Margin = new Padding(0)
+                Width = 164,
+                Height = 42,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = backColor,
+                ForeColor = foreColor,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                Text = text,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(12, 0, 0, 0)
             };
+            button.FlatAppearance.BorderSize = 0;
+            return button;
+        }
+
+        private static string NullIfWhite(string value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
         }
     }
 }

@@ -25,7 +25,9 @@ namespace QuizGenAI.DTOs
         public string QuestionText { get; set; }
         public string Explanation { get; set; }
         public string CorrectAnswerText { get; set; }
+        public string SelectedAnswerText { get; set; }
         public int? SelectedChoiceId { get; set; }
         public int? CorrectChoiceId { get; set; }
+        public bool IsCorrect { get; set; }
     }
 }

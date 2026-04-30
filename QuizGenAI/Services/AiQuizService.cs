@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -253,6 +254,7 @@ namespace QuizGenAI.Services
             foreach (var question in normalizedQuestions)
             {
                 var normalizedChoices = question.Choices
+                    .Select(StripChoicePrefix)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Take(4)
                     .ToList();
@@ -262,7 +264,7 @@ namespace QuizGenAI.Services
                     throw new InvalidOperationException("Each AI-generated question must contain four choices.");
                 }
 
-                var correctChoice = ResolveCorrectChoice(normalizedChoices, question.CorrectAnswer);
+                var correctChoice = ResolveCorrectChoice(normalizedChoices, StripChoicePrefix(question.CorrectAnswer));
 
                 if (string.IsNullOrWhiteSpace(correctChoice))
                 {
@@ -350,6 +352,16 @@ namespace QuizGenAI.Services
             }
 
             return null;
+        }
+
+        private static string StripChoicePrefix(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(value.Trim(), @"^(?:choice|option|answer)?\s*[\(\[]?(?:[A-Da-d]|[1-4])[\)\].:-]\s*", string.Empty).Trim();
         }
 
         private static string RemoveWordIgnoreCase(string input, string value)

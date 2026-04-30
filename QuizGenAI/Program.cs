@@ -11,7 +11,7 @@ namespace QuizGenAI
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -30,6 +30,14 @@ namespace QuizGenAI
                 Application.ApplicationExit += delegate { LoggingService.CloseAndFlush(); };
 
                 var databasePath = Path.Combine(dataDirectory, "quizgenai.db");
+                if (HasArgument(args, "--reset-demo-db"))
+                {
+                    ResetDemoDatabase(databasePath);
+                    LoggingService.Information("Demo database reset completed successfully.");
+                    LoggingService.CloseAndFlush();
+                    return;
+                }
+
                 if (File.Exists(databasePath) && !HasRequiredSchema(databasePath))
                 {
                     File.Delete(databasePath);
@@ -55,6 +63,42 @@ namespace QuizGenAI
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 LoggingService.CloseAndFlush();
+            }
+        }
+
+        private static bool HasArgument(string[] args, string expectedArgument)
+        {
+            if (args == null)
+            {
+                return false;
+            }
+
+            foreach (var arg in args)
+            {
+                if (string.Equals(arg, expectedArgument, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void ResetDemoDatabase(string databasePath)
+        {
+            if (File.Exists(databasePath))
+            {
+                var backupPath = databasePath + "." + DateTime.Now.ToString("yyyyMMddHHmmss") + ".bak";
+                File.Move(databasePath, backupPath);
+                LoggingService.Information("Existing demo database backed up to {BackupPath}.", backupPath);
+            }
+
+            EnsureDatabaseSchema(databasePath);
+            EnsureQuizzesIsDeletedColumn(databasePath);
+
+            using (var context = new QuizGenAIDbContext())
+            {
+                QuizGenAIDatabaseInitializer.SeedIfNeeded(context);
             }
         }
 
